@@ -44,6 +44,30 @@ describe ActiveRecordViews::Extension do
 
         test_request
       end
+      test_request # trigger cleanup
+    end
+
+    it 'drops the view if the external SQL file is deleted' do
+      with_temp_sql_dir do |temp_dir|
+        sql_file = File.join(temp_dir, 'deleted_file_test_model.sql')
+        File.write sql_file, "SELECT 1 AS id, 'delete test'::text AS name"
+
+        class DeletedFileTestModel < ActiveRecord::Base
+          is_view
+        end
+
+        expect(DeletedFileTestModel.first.name).to eq 'delete test'
+
+        File.unlink sql_file
+
+        expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ADROP/).once.and_call_original
+        test_request
+        test_request # second request does not `drop_view` again
+
+        expect {
+          DeletedFileTestModel.first.name
+        }.to raise_error ActiveRecord::StatementInvalid, /relation "deleted_file_test_models" does not exist/
+      end
     end
 
     it 'does not create if database view is initially up to date' do

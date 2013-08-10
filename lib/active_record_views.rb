@@ -46,6 +46,12 @@ module ActiveRecordViews
     cache.set name, checksum
   end
 
+  def self.drop_view(connection, name)
+    cache = ActiveRecordViews::ChecksumCache.new(connection)
+    connection.execute "DROP VIEW IF EXISTS #{connection.quote_table_name name}"
+    cache.set name, nil
+  end
+
   def self.register_for_reload(sql_path, model_path)
     self.registered_views << RegisteredView.new(sql_path, model_path)
   end

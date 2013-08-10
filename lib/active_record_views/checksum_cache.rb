@@ -16,8 +16,12 @@ module ActiveRecordViews
     end
 
     def set(name, checksum)
-      if @connection.update("UPDATE active_record_views SET checksum = #{@connection.quote checksum} WHERE name = #{@connection.quote name}") == 0
-        @connection.insert "INSERT INTO active_record_views (name, checksum) VALUES (#{@connection.quote name}, #{@connection.quote checksum})"
+      if checksum
+        if @connection.update("UPDATE active_record_views SET checksum = #{@connection.quote checksum} WHERE name = #{@connection.quote name}") == 0
+          @connection.insert "INSERT INTO active_record_views (name, checksum) VALUES (#{@connection.quote name}, #{@connection.quote checksum})"
+        end
+      else
+        @connection.delete "DELETE FROM active_record_views WHERE name = #{@connection.quote name}"
       end
     end
   end
