@@ -1,7 +1,9 @@
 require 'active_record_views/version'
 require 'active_record_views/railtie' if defined? Rails
 require 'active_record_views/registered_view'
+require 'active_record_views/checksum_cache'
 require 'active_support/core_ext/module/attribute_accessors'
+require 'digest/sha1'
 
 module ActiveRecordViews
   mattr_accessor :sql_load_path
@@ -24,6 +26,10 @@ module ActiveRecordViews
   end
 
   def self.create_view(connection, name, sql)
+    cache = ActiveRecordViews::ChecksumCache.new(connection)
+    checksum = Digest::SHA1.hexdigest(sql)
+    return if cache.get(name) == checksum
+
     begin
       connection.execute "CREATE OR REPLACE VIEW #{connection.quote_table_name name} AS #{sql}"
     rescue ActiveRecord::StatementInvalid => original_exception
@@ -36,6 +42,8 @@ module ActiveRecordViews
         raise original_exception
       end
     end
+
+    cache.set name, checksum
   end
 
   def self.register_for_reload(sql_path, model_path)

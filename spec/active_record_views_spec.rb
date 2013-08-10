@@ -7,6 +7,7 @@ describe ActiveRecordViews do
     self.use_transactional_fixtures = false
     after do
       connection.execute 'DROP VIEW IF EXISTS test'
+      connection.execute 'DROP TABLE IF EXISTS active_record_views'
     end
 
     def create_test_view(sql)

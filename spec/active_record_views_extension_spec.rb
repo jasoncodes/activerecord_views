@@ -45,5 +45,13 @@ describe ActiveRecordViews::Extension do
         test_request
       end
     end
+
+    it 'does not create if database view is initially up to date' do
+      ActiveRecordViews.create_view ActiveRecord::Base.connection, 'initial_create_test_models', 'SELECT 42 as id'
+      expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ACREATE (?:OR REPLACE )?VIEW/).never
+      class InitialCreateTestModel < ActiveRecord::Base
+        is_view 'SELECT 42 as id'
+      end
+    end
   end
 end
