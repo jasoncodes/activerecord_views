@@ -14,7 +14,7 @@ Advantages over creating views manually in migrations include:
 
 Add this line to your application's `Gemfile`:
 
-```
+```ruby
 gem 'activerecord_views'
 ```
 
@@ -22,7 +22,7 @@ gem 'activerecord_views'
 
 app/models/account.rb:
 
-``` ruby
+```ruby
 class Account < ActiveRecord::Base
   has_many :transactions
 
@@ -33,7 +33,7 @@ end
 
 app/models/transaction.rb:
 
-``` ruby
+```ruby
 class Transaction < ActiveRecord::Base
   belongs_to :account
 end
@@ -41,7 +41,7 @@ end
 
 app/models/account_balance.rb:
 
-``` ruby
+```ruby
 class AccountBalance < ActiveRecord::Base
   is_view
 
@@ -51,7 +51,7 @@ end
 
 app/models/account_balance.sql:
 
-``` sql
+```sql
 SELECT accounts.id AS account_id, coalesce(sum(transactions.amount), 0) AS balance
 FROM accounts
 LEFT JOIN transactions ON accounts.id = transactions.account_id
@@ -60,7 +60,7 @@ GROUP BY accounts.id
 
 Example usage:
 
-``` ruby
+```ruby
 p Account.first.balance
 
 Account.includes(:account_balance).find_each do |account|
@@ -70,7 +70,7 @@ end
 
 ### Usage outside of Rails
 
-``` ruby
+```ruby
 require 'active_record'
 require 'active_record_views'
 ActiveRecordViews.load_path = ['.']
