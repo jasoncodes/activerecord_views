@@ -12,6 +12,11 @@ describe ActiveRecordViews::Extension do
       expect(ExternalFileTestModel.first.name).to eq 'External SQL file'
     end
 
+    it 'creates database views from namespaced external SQL files' do
+      expect(ActiveRecordViews).to receive(:create_view).once.and_call_original
+      expect(Namespace::TestModel.first.name).to eq 'Namespaced SQL file'
+    end
+
     it 'errors if external SQL file is missing' do
       expect {
         MissingFileTestModel
