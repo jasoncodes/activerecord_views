@@ -3,7 +3,7 @@ module ActiveRecordViews
     extend ActiveSupport::Concern
 
     def self.currently_migrating?
-      if defined? Rake
+      if defined?(Rake) && Rake.method_defined?(:application)
         Rake.application.top_level_tasks.include?('db:migrate')
       end
     end
