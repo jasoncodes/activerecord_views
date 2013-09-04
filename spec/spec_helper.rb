@@ -9,7 +9,23 @@ end
 require 'rspec/rails'
 
 RSpec.configure do |config|
-  config.use_transactional_fixtures = true
+  config.use_transactional_fixtures = false
+
+  config.before do
+    connection = ActiveRecord::Base.connection
+
+    connection.execute 'DROP TABLE IF EXISTS active_record_views'
+
+    view_names = connection.select_values <<-SQL
+      SELECT table_name
+      FROM information_schema.views
+      WHERE table_schema = 'public';
+    SQL
+    view_names.each do |view_name|
+      connection.execute "DROP VIEW IF EXISTS #{connection.quote_table_name view_name}"
+    end
+  end
+
 end
 
 def test_request

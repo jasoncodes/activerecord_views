@@ -4,12 +4,6 @@ describe ActiveRecordViews do
   describe '.create_view' do
     let(:connection) { ActiveRecord::Base.connection }
 
-    self.use_transactional_fixtures = false
-    after do
-      connection.execute 'DROP VIEW IF EXISTS test'
-      connection.execute 'DROP TABLE IF EXISTS active_record_views'
-    end
-
     def create_test_view(sql)
       ActiveRecordViews.create_view connection, 'test', sql
     end

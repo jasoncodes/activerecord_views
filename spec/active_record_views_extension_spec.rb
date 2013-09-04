@@ -66,7 +66,7 @@ describe ActiveRecordViews::Extension do
         File.unlink sql_file
 
         expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ADROP/).once.and_call_original
-        expect(ActiveRecord::Base.connection).to receive(:execute).with(/\A(?:RELEASE )?SAVEPOINT/).at_least(1).times.and_call_original
+        expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ABEGIN\z|\ACOMMIT\z/).at_least(1).times.and_call_original
         test_request
         test_request # second request does not `drop_view` again
 
