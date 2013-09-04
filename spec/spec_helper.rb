@@ -5,6 +5,7 @@ require 'combustion'
 require 'active_record_views'
 Combustion.initialize! :active_record, :action_controller do
   config.cache_classes = false
+  config.active_record.whitelist_attributes = true if Rails::VERSION::MAJOR < 4
 end
 require 'rspec/rails'
 

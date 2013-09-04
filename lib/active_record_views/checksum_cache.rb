@@ -25,7 +25,8 @@ module ActiveRecordViews
     def set(name, checksum)
       row = Model.where(:name => name).first_or_initialize
       if checksum
-        row.update_attributes! :checksum => checksum
+        row.checksum = checksum
+        row.save!
       else
         row.destroy
       end
