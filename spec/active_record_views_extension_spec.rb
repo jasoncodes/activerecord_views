@@ -52,6 +52,14 @@ describe ActiveRecordViews::Extension do
       test_request # trigger cleanup
     end
 
+    def view_exists(name)
+      ActiveRecord::Base.connection.select_value <<-SQL
+        SELECT view_definition
+        FROM information_schema.views
+        WHERE table_name = #{ActiveRecord::Base.connection.quote name}
+      SQL
+    end
+
     it 'drops the view if the external SQL file is deleted' do
       with_temp_sql_dir do |temp_dir|
         sql_file = File.join(temp_dir, 'deleted_file_test_model.sql')
@@ -61,18 +69,17 @@ describe ActiveRecordViews::Extension do
           is_view
         end
 
+        expect(view_exists(DeletedFileTestModel.table_name)).to be_true
         expect(DeletedFileTestModel.first.name).to eq 'delete test'
 
         File.unlink sql_file
 
         expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ADROP/).once.and_call_original
-        expect(ActiveRecord::Base.connection).to receive(:execute).with(/\A(?:RELEASE )?SAVEPOINT/).at_least(1).times.and_call_original
+        expect(ActiveRecord::Base.connection).to receive(:execute).with(/\A(?:RELEASE )?SAVEPOINT|ROLLBACK/).at_least(1).times.and_call_original
         test_request
         test_request # second request does not `drop_view` again
 
-        expect {
-          DeletedFileTestModel.first.name
-        }.to raise_error ActiveRecord::StatementInvalid, /relation "deleted_file_test_models" does not exist/
+        expect(view_exists(DeletedFileTestModel.table_name)).to be_false
       end
     end
 
