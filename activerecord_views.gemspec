@@ -19,6 +19,7 @@ Gem::Specification.new do |gem|
 
   gem.add_dependency 'activerecord', ['>= 3.1', '< 4.1']
 
+  gem.add_development_dependency 'appraisal'
   gem.add_development_dependency 'rspec-rails', '>= 2.14'
   gem.add_development_dependency 'combustion', '>= 0.5.1'
   gem.add_development_dependency 'pg'

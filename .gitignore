@@ -1,4 +1,5 @@
 .bundle
 Gemfile.lock
+gemfiles/*.gemfile.lock
 pkg
 spec/internal/log/*.log
