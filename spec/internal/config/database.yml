@@ -1,3 +1,4 @@
 test:
   adapter: postgresql
   database: activerecord_views_test
+  min_messages: warning
