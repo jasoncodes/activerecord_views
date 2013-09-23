@@ -1,12 +1,5 @@
-require 'active_record'
-
 module ActiveRecordViews
   class ChecksumCache
-    class Model < ActiveRecord::Base
-      self.table_name = 'active_record_views'
-      self.primary_key = 'name'
-    end
-
     def initialize(connection)
       @connection = connection
       init_state_table!
@@ -19,16 +12,16 @@ module ActiveRecordViews
     end
 
     def get(name)
-      Model.where(:name => name).first_or_initialize.checksum
+      @connection.select_value("SELECT checksum FROM active_record_views WHERE name = #{@connection.quote name}")
     end
 
     def set(name, checksum)
-      row = Model.where(:name => name).first_or_initialize
       if checksum
-        row.checksum = checksum
-        row.save!
+        if @connection.update("UPDATE active_record_views SET checksum = #{@connection.quote checksum} WHERE name = #{@connection.quote name}") == 0
+          @connection.insert "INSERT INTO active_record_views (name, checksum) VALUES (#{@connection.quote name}, #{@connection.quote checksum})"
+        end
       else
-        row.destroy
+        @connection.delete "DELETE FROM active_record_views WHERE name = #{@connection.quote name}"
       end
     end
   end
