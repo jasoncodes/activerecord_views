@@ -10,7 +10,7 @@ describe ActiveRecordViews do
 
     def test_view_sql
       connection.select_value <<-SQL
-        SELECT view_definition
+        SELECT trim(view_definition)
         FROM information_schema.views
         WHERE table_name = 'test'
       SQL
