@@ -22,6 +22,15 @@ describe ActiveRecordViews do
       expect(test_view_sql).to eq 'SELECT 1 AS id;'
     end
 
+    it 'persists views if transaction rolls back' do
+      expect(test_view_sql).to be_nil
+      connection.transaction :requires_new => true do
+        create_test_view 'select 1 as id'
+        raise ActiveRecord::Rollback
+      end
+      expect(test_view_sql).to eq 'SELECT 1 AS id;'
+    end
+
     context 'with existing view' do
       before do
         create_test_view 'select 1 as id'

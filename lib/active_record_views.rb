@@ -25,31 +25,54 @@ module ActiveRecordViews
     raise "could not find #{name}.sql"
   end
 
-  def self.create_view(connection, name, sql)
-    cache = ActiveRecordViews::ChecksumCache.new(connection)
-    checksum = Digest::SHA1.hexdigest(sql)
-    return if cache.get(name) == checksum
-
-    begin
-      connection.execute "CREATE OR REPLACE VIEW #{connection.quote_table_name name} AS #{sql}"
-    rescue ActiveRecord::StatementInvalid => original_exception
-      begin
-        connection.transaction :requires_new => true do
-          connection.execute "DROP VIEW #{connection.quote_table_name name}"
-          connection.execute "CREATE VIEW #{connection.quote_table_name name} AS #{sql}"
-        end
-      rescue
-        raise original_exception
-      end
+  def self.without_transaction(connection)
+    in_transaction = if connection.respond_to? :transaction_open?
+      connection.transaction_open?
+    else
+      !connection.outside_transaction?
     end
 
-    cache.set name, checksum
+    if in_transaction
+      begin
+        temp_connection = connection.pool.checkout
+        yield temp_connection
+      ensure
+        connection.pool.checkin temp_connection
+      end
+    else
+      yield connection
+    end
+  end
+
+  def self.create_view(connection, name, sql)
+    without_transaction connection do |connection|
+      cache = ActiveRecordViews::ChecksumCache.new(connection)
+      checksum = Digest::SHA1.hexdigest(sql)
+      return if cache.get(name) == checksum
+
+      begin
+        connection.execute "CREATE OR REPLACE VIEW #{connection.quote_table_name name} AS #{sql}"
+      rescue ActiveRecord::StatementInvalid => original_exception
+        begin
+          connection.transaction :requires_new => true do
+            connection.execute "DROP VIEW #{connection.quote_table_name name}"
+            connection.execute "CREATE VIEW #{connection.quote_table_name name} AS #{sql}"
+          end
+        rescue
+          raise original_exception
+        end
+      end
+
+      cache.set name, checksum
+    end
   end
 
   def self.drop_view(connection, name)
-    cache = ActiveRecordViews::ChecksumCache.new(connection)
-    connection.execute "DROP VIEW IF EXISTS #{connection.quote_table_name name}"
-    cache.set name, nil
+    without_transaction connection do |connection|
+      cache = ActiveRecordViews::ChecksumCache.new(connection)
+      connection.execute "DROP VIEW IF EXISTS #{connection.quote_table_name name}"
+      cache.set name, nil
+    end
   end
 
   def self.register_for_reload(sql_path, model_path)
