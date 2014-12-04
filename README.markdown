@@ -73,7 +73,7 @@ end
 ```ruby
 require 'active_record'
 require 'active_record_views'
-ActiveRecordViews.load_path = ['.']
+ActiveRecordViews.sql_load_path << '.'
 ActiveRecordViews.init!
 ```
 
