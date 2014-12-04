@@ -68,6 +68,16 @@ Account.includes(:account_balance).find_each do |account|
 end
 ```
 
+## Pre-populating views in Rails development mode
+
+Rails loads classes lazily in development mode by default.
+This means ActiveRecordViews models will not initialize and create/update database views until the model classes are accessed.
+If you're debugging in `psql` and want to ensure all views have been created, you can force Rails to load them by running the following in a `rails console`:
+
+```ruby
+Rails.application.eager_load!
+```
+
 ### Usage outside of Rails
 
 When included in a Ruby on Rails project, ActiveRecordViews will automatically detect `.sql` files alongside models in `app/models`.
