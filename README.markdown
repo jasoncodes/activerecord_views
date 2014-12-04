@@ -70,11 +70,23 @@ end
 
 ### Usage outside of Rails
 
+When included in a Ruby on Rails project, ActiveRecordViews will automatically detect `.sql` files alongside models in `app/models`.
+Outside of Rails, you will have to tell ActiveRecordViews where to find associated `.sql` files for models:
+
 ```ruby
 require 'active_record'
 require 'active_record_views'
-ActiveRecordViews.sql_load_path << '.'
+require 'pg'
+
+ActiveRecordViews.sql_load_path << '.' # load .sql files from current directory
 ActiveRecordViews.init!
+ActiveRecord::Base.establish_connection 'postgresql:///example'
+
+class Foo < ActiveRecord::Base
+  is_view
+end
+
+p Foo.all
 ```
 
 ## License
