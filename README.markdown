@@ -78,6 +78,16 @@ If you're debugging in `psql` and want to ensure all views have been created, yo
 Rails.application.eager_load!
 ```
 
+## Handling renames/deletions
+
+ActiveRecordViews tracks database views by their name. When an ActiveRecordViews model is renamed or deleted, there is no longer a link between the model and the associated database table. This means an orphan view will be left in the database.
+
+In order to keep things tidy and to avoid accidentally referencing a stale view, you should remove the view and associated ActiveRecordViews metadata when renaming or deleting a model using ActiveRecordViews. This is best done with a database migration (use `rails generate migration`) containing the following:
+
+```ruby
+ActiveRecordViews.drop_view connection, 'account_balances'
+```
+
 ### Usage outside of Rails
 
 When included in a Ruby on Rails project, ActiveRecordViews will automatically detect `.sql` files alongside models in `app/models`.
