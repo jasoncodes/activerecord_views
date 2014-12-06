@@ -57,18 +57,19 @@ describe ActiveRecordViews do
 
       context 'having dependant views' do
         before do
-          connection.execute <<-SQL
-            CREATE VIEW dependency1 AS SELECT id FROM test;
-            CREATE VIEW dependency2a AS SELECT id, id * 2 AS id2 FROM dependency1;
-            CREATE VIEW dependency2b AS SELECT id, id * 4 AS id4 FROM dependency1;
-            CREATE VIEW dependency3 AS SELECT * FROM dependency2b;
-            CREATE VIEW dependency4 AS SELECT id FROM dependency1 UNION ALL SELECT id FROM dependency3;
-          SQL
+          ActiveRecordViews.create_view connection, 'dependency1', 'SELECT id FROM test;'
+          ActiveRecordViews.create_view connection, 'dependency2a', 'SELECT id, id * 2 AS id2 FROM dependency1;'
+          ActiveRecordViews.create_view connection, 'dependency2b', 'SELECT id, id * 4 AS id4 FROM dependency1;'
+          ActiveRecordViews.create_view connection, 'dependency3', 'SELECT * FROM dependency2b;'
+          ActiveRecordViews.create_view connection, 'dependency4', 'SELECT id FROM dependency1 UNION ALL SELECT id FROM dependency3;'
         end
 
         after do
-          expect(view_names).to match_array %w[test dependency1 dependency2a dependency2b dependency3 dependency4]
-          connection.execute 'DROP VIEW dependency1 CASCADE;'
+          dependants = %w[test dependency1 dependency2a dependency2b dependency3 dependency4]
+          expect(view_names).to match_array dependants
+          dependants.reverse.each do |name|
+            ActiveRecordViews.drop_view connection, name
+          end
         end
 
         it 'updates view with compatible change' do
@@ -91,6 +92,28 @@ describe ActiveRecordViews do
             expect(test_view_sql).to eq 'SELECT 1 AS id;'
             expect(connection.select_value('SELECT id2 FROM dependency2a')).to eq '2'
           end
+        end
+      end
+
+      describe 'with unmanaged dependant view' do
+        before do
+          connection.execute 'CREATE VIEW dependency AS SELECT id FROM test'
+        end
+
+        after do
+          connection.execute 'DROP VIEW dependency;'
+        end
+
+        it 'updates view with compatible change' do
+          create_test_view 'select 2 as id'
+          expect(test_view_sql).to eq 'SELECT 2 AS id;'
+        end
+
+        it 'fails to update view with incompatible change' do
+          expect {
+            create_test_view "SELECT 'foo'::text as name, 4 as id"
+          }.to raise_error ActiveRecord::StatementInvalid, /view dependency depends on view test/
+          expect(test_view_sql).to eq 'SELECT 1 AS id;'
         end
       end
     end

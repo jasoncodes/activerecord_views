@@ -95,6 +95,7 @@ module ActiveRecordViews
         oid::regclass::text AS name,
         pg_catalog.pg_get_viewdef(oid) AS definition
       FROM dependants
+      INNER JOIN active_record_views ON active_record_views.name = oid::regclass::text
       WHERE level > 0
       GROUP BY oid
       ORDER BY MAX(level)
