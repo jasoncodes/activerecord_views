@@ -9,10 +9,18 @@ describe ActiveRecordViews do
     end
 
     def test_view_sql
-      connection.select_value <<-SQL
-        SELECT trim(view_definition)
+      connection.select_value(<<-SQL).try(&:squish)
+        SELECT view_definition
         FROM information_schema.views
-        WHERE table_name = 'test'
+        WHERE table_schema = 'public' AND table_name = 'test'
+      SQL
+    end
+
+    def view_names
+      connection.select_values <<-SQL
+        SELECT table_name
+        FROM information_schema.views
+        WHERE table_schema = 'public'
       SQL
     end
 
@@ -47,25 +55,42 @@ describe ActiveRecordViews do
         expect(test_view_sql).to eq "SELECT 'foo'::text AS name;"
       end
 
-      context 'having a dependant view' do
+      context 'having dependant views' do
         before do
-          connection.execute 'CREATE VIEW dependency AS SELECT * FROM test'
+          connection.execute <<-SQL
+            CREATE VIEW dependency1 AS SELECT id FROM test;
+            CREATE VIEW dependency2a AS SELECT id, id * 2 AS id2 FROM dependency1;
+            CREATE VIEW dependency2b AS SELECT id, id * 4 AS id4 FROM dependency1;
+            CREATE VIEW dependency3 AS SELECT * FROM dependency2b;
+            CREATE VIEW dependency4 AS SELECT id FROM dependency1 UNION ALL SELECT id FROM dependency3;
+          SQL
         end
 
         after do
-          connection.execute 'DROP VIEW dependency'
+          expect(view_names).to match_array %w[test dependency1 dependency2a dependency2b dependency3 dependency4]
+          connection.execute 'DROP VIEW dependency1 CASCADE;'
         end
 
         it 'updates view with compatible change' do
           create_test_view 'select 2 as id'
           expect(test_view_sql).to eq 'SELECT 2 AS id;'
+          expect(connection.select_value('SELECT id2 FROM dependency2a')).to eq '4'
         end
 
-        it 'fails to update view with incompatible signature change' do
-          expect {
-            create_test_view "select 'foo'::text as name"
-          }.to raise_error ActiveRecord::StatementInvalid, /cannot change name of view column/
-          expect(test_view_sql).to eq 'SELECT 1 AS id;'
+        describe 'changes incompatible with CREATE OR REPLACE' do
+          it 'updates view with new column added before existing' do
+            create_test_view "select 'foo'::text as name, 3 as id"
+            expect(test_view_sql).to eq "SELECT 'foo'::text AS name, 3 AS id;"
+            expect(connection.select_value('SELECT id2 FROM dependency2a')).to eq '6'
+          end
+
+          it 'fails to update view if column used by dependant view is removed' do
+            expect {
+              create_test_view "select 'foo'::text as name"
+            }.to raise_error ActiveRecord::StatementInvalid, /column test.id does not exist/
+            expect(test_view_sql).to eq 'SELECT 1 AS id;'
+            expect(connection.select_value('SELECT id2 FROM dependency2a')).to eq '2'
+          end
         end
       end
     end

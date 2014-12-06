@@ -53,13 +53,11 @@ module ActiveRecordViews
       begin
         connection.execute "CREATE OR REPLACE VIEW #{connection.quote_table_name name} AS #{sql}"
       rescue ActiveRecord::StatementInvalid => original_exception
-        begin
-          connection.transaction :requires_new => true do
+        connection.transaction :requires_new => true do
+          without_dependencies connection, name do
             connection.execute "DROP VIEW #{connection.quote_table_name name}"
             connection.execute "CREATE VIEW #{connection.quote_table_name name} AS #{sql}"
           end
-        rescue
-          raise original_exception
         end
       end
 
@@ -72,6 +70,49 @@ module ActiveRecordViews
       cache = ActiveRecordViews::ChecksumCache.new(connection)
       connection.execute "DROP VIEW IF EXISTS #{connection.quote_table_name name}"
       cache.set name, nil
+    end
+  end
+
+  def self.get_view_dependencies(connection, name)
+    connection.select_rows <<-SQL
+      WITH RECURSIVE dependants AS (
+        SELECT
+          #{connection.quote name}::regclass::oid,
+          0 AS level
+
+        UNION ALL
+
+        SELECT
+          DISTINCT(pg_rewrite.ev_class) AS oid,
+          dependants.level + 1 AS level
+        FROM pg_depend dep
+        INNER JOIN pg_rewrite ON pg_rewrite.oid = dep.objid
+        INNER JOIN dependants ON dependants.oid = dep.refobjid
+        WHERE pg_rewrite.ev_class != dep.refobjid AND dep.deptype = 'n'
+      )
+
+      SELECT
+        oid::regclass::text AS name,
+        pg_catalog.pg_get_viewdef(oid) AS definition
+      FROM dependants
+      WHERE level > 0
+      GROUP BY oid
+      ORDER BY MAX(level)
+      ;
+    SQL
+  end
+
+  def self.without_dependencies(connection, name)
+    dependencies = get_view_dependencies(connection, name)
+
+    dependencies.reverse.each do |name, _|
+      connection.execute "DROP VIEW #{name};"
+    end
+
+    yield
+
+    dependencies.each do |name, definition|
+      connection.execute "CREATE VIEW #{name} AS #{definition};"
     end
   end
 
