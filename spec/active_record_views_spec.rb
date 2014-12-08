@@ -5,7 +5,7 @@ describe ActiveRecordViews do
     let(:connection) { ActiveRecord::Base.connection }
 
     def create_test_view(sql)
-      ActiveRecordViews.create_view connection, 'test', sql
+      ActiveRecordViews.create_view connection, 'test', 'Test', sql
     end
 
     def test_view_sql
@@ -28,6 +28,17 @@ describe ActiveRecordViews do
       expect(test_view_sql).to be_nil
       create_test_view 'select 1 as id'
       expect(test_view_sql).to eq 'SELECT 1 AS id;'
+    end
+
+    it 'records checksum and class name' do
+      create_test_view 'select 1 as id'
+      expect(connection.select_all('select * from active_record_views').to_a).to eq [
+        {
+          'name' => 'test',
+          'class_name' => 'Test',
+          'checksum' => Digest::SHA1.hexdigest('select 1 as id')
+        }
+      ]
     end
 
     it 'persists views if transaction rolls back' do
@@ -63,11 +74,11 @@ describe ActiveRecordViews do
 
       context 'having dependant views' do
         before do
-          ActiveRecordViews.create_view connection, 'dependency1', 'SELECT id FROM test;'
-          ActiveRecordViews.create_view connection, 'dependency2a', 'SELECT id, id * 2 AS id2 FROM dependency1;'
-          ActiveRecordViews.create_view connection, 'dependency2b', 'SELECT id, id * 4 AS id4 FROM dependency1;'
-          ActiveRecordViews.create_view connection, 'dependency3', 'SELECT * FROM dependency2b;'
-          ActiveRecordViews.create_view connection, 'dependency4', 'SELECT id FROM dependency1 UNION ALL SELECT id FROM dependency3;'
+          ActiveRecordViews.create_view connection, 'dependency1', 'Dependency1', 'SELECT id FROM test;'
+          ActiveRecordViews.create_view connection, 'dependency2a', 'Dependency2a', 'SELECT id, id * 2 AS id2 FROM dependency1;'
+          ActiveRecordViews.create_view connection, 'dependency2b', 'Dependency2b', 'SELECT id, id * 4 AS id4 FROM dependency1;'
+          ActiveRecordViews.create_view connection, 'dependency3', 'Dependency3', 'SELECT * FROM dependency2b;'
+          ActiveRecordViews.create_view connection, 'dependency4', 'Dependency4', 'SELECT id FROM dependency1 UNION ALL SELECT id FROM dependency3;'
         end
 
         after do

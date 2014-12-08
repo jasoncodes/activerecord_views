@@ -46,11 +46,11 @@ module ActiveRecordViews
     end
   end
 
-  def self.create_view(connection, name, sql)
+  def self.create_view(connection, name, class_name, sql)
     without_transaction connection do |connection|
       cache = ActiveRecordViews::ChecksumCache.new(connection)
-      checksum = Digest::SHA1.hexdigest(sql)
-      return if cache.get(name) == checksum
+      data = {class_name: class_name, checksum: Digest::SHA1.hexdigest(sql)}
+      return if cache.get(name) == data
 
       begin
         connection.execute "CREATE OR REPLACE VIEW #{connection.quote_table_name name} AS #{sql}"
@@ -64,7 +64,7 @@ module ActiveRecordViews
         end
       end
 
-      cache.set name, checksum
+      cache.set name, data
     end
   end
 

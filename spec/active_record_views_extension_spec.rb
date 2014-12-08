@@ -33,6 +33,7 @@ describe ActiveRecordViews::Extension do
         expect(ActiveRecordViews).to receive(:create_view).with(
           anything,
           'modified_file_test_models',
+          'ModifiedFileTestModel',
           sql
         ).once.ordered
       end
@@ -81,7 +82,7 @@ describe ActiveRecordViews::Extension do
     end
 
     it 'does not create if database view is initially up to date' do
-      ActiveRecordViews.create_view ActiveRecord::Base.connection, 'initial_create_test_models', 'SELECT 42 as id'
+      ActiveRecordViews.create_view ActiveRecord::Base.connection, 'initial_create_test_models', 'InitialCreateTestModel', 'SELECT 42 as id'
       expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ACREATE (?:OR REPLACE )?VIEW/).never
       class InitialCreateTestModel < ActiveRecord::Base
         is_view 'SELECT 42 as id'

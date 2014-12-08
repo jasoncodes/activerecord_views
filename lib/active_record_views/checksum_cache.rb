@@ -6,19 +6,27 @@ module ActiveRecordViews
     end
 
     def init_state_table!
-      unless @connection.table_exists?('active_record_views')
-        @connection.execute 'CREATE TABLE active_record_views(name text PRIMARY KEY, checksum text NOT NULL);'
+      table_exists = @connection.table_exists?('active_record_views')
+
+      if table_exists && !@connection.column_exists?('active_record_views', 'class_name')
+        @connection.execute 'DROP TABLE active_record_views;'
+        table_exists = false
+      end
+
+      unless table_exists
+        @connection.execute 'CREATE TABLE active_record_views(name text PRIMARY KEY, class_name text NOT NULL UNIQUE, checksum text NOT NULL);'
       end
     end
 
     def get(name)
-      @connection.select_value("SELECT checksum FROM active_record_views WHERE name = #{@connection.quote name}")
+      @connection.select_one("SELECT class_name, checksum FROM active_record_views WHERE name = #{@connection.quote name}").try(:symbolize_keys)
     end
 
-    def set(name, checksum)
-      if checksum
-        if @connection.update("UPDATE active_record_views SET checksum = #{@connection.quote checksum} WHERE name = #{@connection.quote name}") == 0
-          @connection.insert "INSERT INTO active_record_views (name, checksum) VALUES (#{@connection.quote name}, #{@connection.quote checksum})"
+    def set(name, data)
+      if data
+        data.assert_valid_keys :class_name, :checksum
+        if @connection.update("UPDATE active_record_views SET class_name = #{@connection.quote data[:class_name]}, checksum = #{@connection.quote data[:checksum]} WHERE name = #{@connection.quote name}") == 0
+          @connection.insert "INSERT INTO active_record_views (name, class_name, checksum) VALUES (#{@connection.quote name}, #{@connection.quote data[:class_name]}, #{@connection.quote data[:checksum]})"
         end
       else
         @connection.delete "DELETE FROM active_record_views WHERE name = #{@connection.quote name}"

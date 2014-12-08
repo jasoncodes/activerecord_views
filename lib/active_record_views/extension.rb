@@ -24,7 +24,7 @@ module ActiveRecordViews
         end
 
         unless ActiveRecordViews::Extension.currently_migrating?
-          ActiveRecordViews.create_view self.connection, self.table_name, sql
+          ActiveRecordViews.create_view self.connection, self.table_name, self.name, sql
         end
       end
     end
