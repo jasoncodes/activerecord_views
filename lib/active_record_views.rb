@@ -53,6 +53,7 @@ module ActiveRecordViews
       begin
         connection.execute "CREATE OR REPLACE VIEW #{connection.quote_table_name name} AS #{sql}"
       rescue ActiveRecord::StatementInvalid => original_exception
+        raise unless view_exists?(connection, name)
         connection.transaction :requires_new => true do
           without_dependencies connection, name do
             connection.execute "DROP VIEW #{connection.quote_table_name name}"
@@ -71,6 +72,14 @@ module ActiveRecordViews
       connection.execute "DROP VIEW IF EXISTS #{connection.quote_table_name name}"
       cache.set name, nil
     end
+  end
+
+  def self.view_exists?(connection, name)
+    connection.select_value(<<-SQL).present?
+      SELECT 1
+      FROM information_schema.views
+      WHERE table_schema = 'public' AND table_name = #{connection.quote name};
+    SQL
   end
 
   def self.get_view_dependencies(connection, name)

@@ -39,6 +39,12 @@ describe ActiveRecordViews do
       expect(test_view_sql).to eq 'SELECT 1 AS id;'
     end
 
+    it 'raises descriptive error if view SQL is invalid' do
+      expect {
+        create_test_view 'select blah'
+      }.to raise_error ActiveRecord::StatementInvalid, /column "blah" does not exist/
+    end
+
     context 'with existing view' do
       before do
         create_test_view 'select 1 as id'
