@@ -21,6 +21,8 @@ module ActiveRecordViews
     self.sql_load_path.each do |dir|
       path = "#{dir}/#{name}.sql"
       return path if File.exists?(path)
+      path = path + '.erb'
+      return path if File.exists?(path)
     end
     raise "could not find #{name}.sql"
   end
