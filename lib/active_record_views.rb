@@ -117,8 +117,8 @@ module ActiveRecordViews
     end
   end
 
-  def self.register_for_reload(sql_path, model_path)
-    self.registered_views << RegisteredView.new(sql_path, model_path)
+  def self.register_for_reload(model_class, sql_path)
+    self.registered_views << RegisteredView.new(model_class, sql_path)
   end
 
   def self.reload_stale_views!
