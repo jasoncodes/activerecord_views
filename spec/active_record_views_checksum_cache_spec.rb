@@ -39,6 +39,9 @@ describe ActiveRecordViews::ChecksumCache do
 
       it 'drops existing managed views recreates the table' do
         expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ABEGIN\z/).once.and_call_original
+        if Rails::VERSION::MAJOR < 4
+          expect(ActiveRecord::Base.connection).to receive(:execute).with('SELECT name FROM active_record_views;', nil).once.and_call_original
+        end
         expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ADROP VIEW IF EXISTS test_view CASCADE;\z/).once.and_call_original
         expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ADROP TABLE active_record_views;\z/).once.and_call_original
         expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ACREATE TABLE active_record_views/).once.and_call_original
