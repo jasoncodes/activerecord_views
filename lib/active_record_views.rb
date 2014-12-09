@@ -111,11 +111,12 @@ module ActiveRecordViews
 
       SELECT
         oid::regclass::text AS name,
+        class_name,
         pg_catalog.pg_get_viewdef(oid) AS definition
       FROM dependants
       INNER JOIN active_record_views ON active_record_views.name = oid::regclass::text
       WHERE level > 0
-      GROUP BY oid
+      GROUP BY oid, class_name
       ORDER BY MAX(level)
       ;
     SQL
@@ -124,14 +125,19 @@ module ActiveRecordViews
   def self.without_dependencies(connection, name)
     dependencies = get_view_dependencies(connection, name)
 
-    dependencies.reverse.each do |name, _|
+    dependencies.reverse.each do |name, _, _|
       connection.execute "DROP VIEW #{name};"
     end
 
     yield
 
-    dependencies.each do |name, definition|
-      connection.execute "CREATE VIEW #{name} AS #{definition};"
+    dependencies.each do |name, class_name, definition|
+      begin
+        class_name.constantize
+      rescue NameError => e
+        raise unless e.missing_name?(class_name)
+        connection.execute "CREATE VIEW #{name} AS #{definition};"
+      end
     end
   end
 

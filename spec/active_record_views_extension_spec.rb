@@ -88,5 +88,12 @@ describe ActiveRecordViews::Extension do
         is_view 'SELECT 42 as id'
       end
     end
+
+    it 'successfully recreates modified paired views with incompatible changes' do
+      ActiveRecordViews.create_view ActiveRecord::Base.connection, 'modified_as', 'ModifiedA', 'SELECT 11 AS old_name;'
+      ActiveRecordViews.create_view ActiveRecord::Base.connection, 'modified_bs', 'ModifiedB', 'SELECT old_name FROM modified_as;'
+
+      expect(ModifiedB.first.attributes.except(nil)).to eq('new_name' => 22)
+    end
   end
 end

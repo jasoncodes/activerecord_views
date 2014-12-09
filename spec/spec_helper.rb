@@ -23,7 +23,7 @@ RSpec.configure do |config|
       WHERE table_schema = 'public';
     SQL
     view_names.each do |view_name|
-      connection.execute "DROP VIEW IF EXISTS #{connection.quote_table_name view_name}"
+      connection.execute "DROP VIEW IF EXISTS #{connection.quote_table_name view_name} CASCADE"
     end
   end
 
