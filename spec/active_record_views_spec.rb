@@ -135,4 +135,33 @@ describe ActiveRecordViews do
       end
     end
   end
+
+  describe '.without_transaction' do
+    let(:original_connection) { ActiveRecord::Base.connection }
+
+    it 'yields original connection if no active transaction' do
+      ActiveRecordViews.without_transaction original_connection do |new_connection|
+        expect(new_connection).to eq original_connection
+      end
+    end
+
+    it 'yields a new connection if inside a transaction' do
+      original_connection.transaction do
+        ActiveRecordViews.without_transaction original_connection do |new_connection|
+          expect(new_connection).to_not eq original_connection
+        end
+      end
+    end
+
+    it 'yields original connection if called recursively' do
+      ActiveRecordViews.without_transaction original_connection do |new_connection_1|
+        expect(new_connection_1).to eq original_connection
+        new_connection_1.transaction do
+          ActiveRecordViews.without_transaction new_connection_1 do |new_connection_2|
+            expect(new_connection_2).to eq new_connection_1
+          end
+        end
+      end
+    end
+  end
 end

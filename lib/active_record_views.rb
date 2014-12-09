@@ -34,15 +34,22 @@ module ActiveRecordViews
       !connection.outside_transaction?
     end
 
-    if in_transaction
-      begin
-        temp_connection = connection.pool.checkout
-        yield temp_connection
-      ensure
-        connection.pool.checkin temp_connection
+    begin
+      recursing = Thread.current[:active_record_views_without_transaction]
+      Thread.current[:active_record_views_without_transaction] = true
+
+      if in_transaction && !recursing
+        begin
+          temp_connection = connection.pool.checkout
+          yield temp_connection
+        ensure
+          connection.pool.checkin temp_connection
+        end
+      else
+        yield connection
       end
-    else
-      yield connection
+    ensure
+      Thread.current[:active_record_views_without_transaction] = nil
     end
   end
 
