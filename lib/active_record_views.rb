@@ -20,9 +20,9 @@ module ActiveRecordViews
   def self.find_sql_file(name)
     self.sql_load_path.each do |dir|
       path = "#{dir}/#{name}.sql"
-      return path if File.exists?(path)
+      return path if File.exist?(path)
       path = path + '.erb'
-      return path if File.exists?(path)
+      return path if File.exist?(path)
     end
     raise "could not find #{name}.sql"
   end
@@ -53,15 +53,15 @@ module ActiveRecordViews
     end
   end
 
-  def self.create_view(connection, name, class_name, sql)
-    without_transaction connection do |connection|
+  def self.create_view(base_connection, name, class_name, sql)
+    without_transaction base_connection do |connection|
       cache = ActiveRecordViews::ChecksumCache.new(connection)
       data = {class_name: class_name, checksum: Digest::SHA1.hexdigest(sql)}
       return if cache.get(name) == data
 
       begin
         connection.execute "CREATE OR REPLACE VIEW #{connection.quote_table_name name} AS #{sql}"
-      rescue ActiveRecord::StatementInvalid => original_exception
+      rescue ActiveRecord::StatementInvalid
         raise unless view_exists?(connection, name)
         connection.transaction :requires_new => true do
           without_dependencies connection, name do
@@ -75,8 +75,8 @@ module ActiveRecordViews
     end
   end
 
-  def self.drop_view(connection, name)
-    without_transaction connection do |connection|
+  def self.drop_view(base_connection, name)
+    without_transaction base_connection do |connection|
       cache = ActiveRecordViews::ChecksumCache.new(connection)
       connection.execute "DROP VIEW IF EXISTS #{connection.quote_table_name name}"
       cache.set name, nil
@@ -125,18 +125,18 @@ module ActiveRecordViews
   def self.without_dependencies(connection, name)
     dependencies = get_view_dependencies(connection, name)
 
-    dependencies.reverse.each do |name, _, _|
-      connection.execute "DROP VIEW #{name};"
+    dependencies.reverse.each do |dependency_name, _, _|
+      connection.execute "DROP VIEW #{dependency_name};"
     end
 
     yield
 
-    dependencies.each do |name, class_name, definition|
+    dependencies.each do |dependency_name, class_name, definition|
       begin
         class_name.constantize
       rescue NameError => e
         raise unless e.missing_name?(class_name)
-        connection.execute "CREATE VIEW #{name} AS #{definition};"
+        connection.execute "CREATE VIEW #{dependency_name} AS #{definition};"
       end
     end
   end

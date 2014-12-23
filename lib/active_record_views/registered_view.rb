@@ -1,6 +1,6 @@
 module ActiveRecordViews
   class RegisteredView
-    attr_reader :model_class, :sql_path
+    attr_reader :sql_path
 
     def initialize(model_class, sql_path)
       @model_class_name = model_class.name
@@ -17,7 +17,7 @@ module ActiveRecordViews
     end
 
     def reload!
-      if File.exists? sql_path
+      if File.exist? sql_path
         ActiveRecordViews.create_view model_class.connection, model_class.table_name, model_class.name, File.read(sql_path)
       else
         ActiveRecordViews.drop_view model_class.connection, model_class.table_name
@@ -28,7 +28,7 @@ module ActiveRecordViews
     private
 
     def sql_timestamp
-      File.exists?(sql_path) ? File.mtime(sql_path) : nil
+      File.exist?(sql_path) ? File.mtime(sql_path) : nil
     end
 
     def update_timestamp!

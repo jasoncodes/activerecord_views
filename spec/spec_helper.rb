@@ -1,6 +1,9 @@
 require 'bundler'
 Bundler.setup
 
+require 'rails/version'
+$VERBOSE = true unless Rails::VERSION::MAJOR < 4
+
 require 'combustion'
 require 'active_record_views'
 Combustion.initialize! :active_record, :action_controller do
@@ -49,7 +52,7 @@ def with_temp_sql_dir
 end
 
 def update_file(file, new_content)
-  time = File.exists?(file) ? File.mtime(file) : Time.parse('2012-01-01')
+  time = File.exist?(file) ? File.mtime(file) : Time.parse('2012-01-01')
   time = time + 1
   File.write file, new_content
   File.utime time, time, file
