@@ -75,7 +75,7 @@ module ActiveRecordViews
 
       if drop_and_create
         connection.transaction :requires_new => true do
-          without_dependencies connection, name do
+          without_dependants connection, name do
             execute_drop_view connection, name
             execute_create_view connection, name, sql, options
           end
@@ -146,7 +146,7 @@ module ActiveRecordViews
     connection.raw_connection.server_version >= 90400
   end
 
-  def self.get_view_dependencies(connection, name)
+  def self.get_view_dependants(connection, name)
     connection.select_rows <<-SQL.squish
       WITH RECURSIVE dependants AS (
         SELECT
@@ -178,30 +178,30 @@ module ActiveRecordViews
     SQL
   end
 
-  def self.without_dependencies(connection, name)
+  def self.without_dependants(connection, name)
     unless view_exists?(connection, name)
       yield
       return
     end
 
-    dependencies = get_view_dependencies(connection, name)
+    dependants = get_view_dependants(connection, name)
     cache = ActiveRecordViews::ChecksumCache.new(connection)
-    dependency_metadata = {}
+    dependant_metadata = {}
 
-    dependencies.reverse.each do |dependency_name, _, _, _|
-      execute_drop_view connection, dependency_name
-      dependency_metadata[dependency_name] = cache.get(dependency_name)
-      cache.set dependency_name, nil
+    dependants.reverse.each do |dependant_name, _, _, _|
+      execute_drop_view connection, dependant_name
+      dependant_metadata[dependant_name] = cache.get(dependant_name)
+      cache.set dependant_name, nil
     end
 
     yield
 
-    dependencies.each do |dependency_name, class_name, definition, options_json|
+    dependants.each do |dependant_name, class_name, definition, options_json|
       create_view_exception = begin
         connection.transaction :requires_new => true do
           options = JSON.load(options_json).symbolize_keys
-          execute_create_view connection, dependency_name, definition, options
-          cache.set dependency_name, dependency_metadata[dependency_name]
+          execute_create_view connection, dependant_name, definition, options
+          cache.set dependant_name, dependant_metadata[dependant_name]
         end
         nil
       rescue StandardError => e
