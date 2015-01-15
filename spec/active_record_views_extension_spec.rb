@@ -95,5 +95,13 @@ describe ActiveRecordViews::Extension do
 
       expect(ModifiedB.first.attributes.except(nil)).to eq('new_name' => 22)
     end
+
+    it 'errors if more than one argument is specified' do
+      expect {
+        class TooManyArguments < ActiveRecord::Base
+          is_view 'SELECT 1 AS ID;', 'SELECT 2 AS ID;'
+        end
+      }.to raise_error ArgumentError, 'wrong number of arguments (2 for 0..1)'
+    end
   end
 end
