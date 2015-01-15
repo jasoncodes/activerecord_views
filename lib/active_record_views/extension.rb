@@ -11,7 +11,13 @@ module ActiveRecordViews
     end
 
     module ClassMethods
-      def is_view(sql = nil)
+      def is_view(*args)
+        options = args.extract_options!
+        options.assert_valid_keys
+
+        raise ArgumentError, "wrong number of arguments (#{args.size} for 0..1)" unless (0..1).cover?(args.size)
+        sql = args.shift
+
         sql ||= begin
           sql_path = ActiveRecordViews.find_sql_file(self.name.underscore)
           ActiveRecordViews.register_for_reload self, sql_path

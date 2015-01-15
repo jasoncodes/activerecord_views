@@ -103,5 +103,13 @@ describe ActiveRecordViews::Extension do
         end
       }.to raise_error ArgumentError, 'wrong number of arguments (2 for 0..1)'
     end
+
+    it 'errors if an invalid option is specified' do
+      expect {
+        class InvalidOption < ActiveRecord::Base
+          is_view 'SELECT 1 AS ID;', blargh: 123
+        end
+      }.to raise_error ArgumentError, /^Unknown key: :?blargh/
+    end
   end
 end
