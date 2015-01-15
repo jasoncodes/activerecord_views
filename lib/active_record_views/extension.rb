@@ -12,6 +12,8 @@ module ActiveRecordViews
 
     module ClassMethods
       def is_view(*args)
+        return if ActiveRecordViews::Extension.currently_migrating?
+
         options = args.extract_options!
         options.assert_valid_keys
 
@@ -29,9 +31,7 @@ module ActiveRecordViews
           end
         end
 
-        unless ActiveRecordViews::Extension.currently_migrating?
-          ActiveRecordViews.create_view self.connection, self.table_name, self.name, sql
-        end
+        ActiveRecordViews.create_view self.connection, self.table_name, self.name, sql
       end
     end
   end
