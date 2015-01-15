@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 describe ActiveRecordViews::Extension do
-  describe '.as_view' do
+  describe '.is_view' do
     it 'creates database views from heredocs' do
       expect(ActiveRecordViews).to receive(:create_view).once.and_call_original
       expect(HeredocTestModel.first.name).to eq 'Here document'
