@@ -18,7 +18,7 @@ module ActiveRecordViews
 
     def reload!
       if File.exist? sql_path
-        ActiveRecordViews.create_view model_class.connection, model_class.table_name, model_class.name, File.read(sql_path)
+        ActiveRecordViews.create_view model_class.connection, model_class.table_name, model_class.name, File.read(sql_path), model_class.view_options
       else
         ActiveRecordViews.drop_view model_class.connection, model_class.table_name
       end

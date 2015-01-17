@@ -53,7 +53,9 @@ module ActiveRecordViews
     end
   end
 
-  def self.create_view(base_connection, name, class_name, sql)
+  def self.create_view(base_connection, name, class_name, sql, options = {})
+    options.assert_valid_keys
+
     without_transaction base_connection do |connection|
       cache = ActiveRecordViews::ChecksumCache.new(connection)
       data = {class_name: class_name, checksum: Digest::SHA1.hexdigest(sql)}

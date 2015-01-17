@@ -14,8 +14,8 @@ module ActiveRecordViews
       def is_view(*args)
         return if ActiveRecordViews::Extension.currently_migrating?
 
-        options = args.extract_options!
-        options.assert_valid_keys
+        cattr_accessor :view_options
+        self.view_options = args.extract_options!
 
         raise ArgumentError, "wrong number of arguments (#{args.size} for 0..1)" unless (0..1).cover?(args.size)
         sql = args.shift
@@ -31,7 +31,7 @@ module ActiveRecordViews
           end
         end
 
-        ActiveRecordViews.create_view self.connection, self.table_name, self.name, sql
+        ActiveRecordViews.create_view self.connection, self.table_name, self.name, sql, self.view_options
       end
     end
   end

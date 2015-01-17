@@ -34,7 +34,8 @@ describe ActiveRecordViews::Extension do
           anything,
           'modified_file_test_models',
           'ModifiedFileTestModel',
-          sql
+          sql,
+          {}
         ).once.ordered
       end
 
