@@ -4,7 +4,7 @@ describe ActiveRecordViews::ChecksumCache do
   let(:connection) { ActiveRecord::Base.connection }
 
   describe 'initialisation' do
-    context 'with no existing table' do
+    context 'no existing table' do
       it 'creates the table' do
         expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ACREATE TABLE active_record_views/).once.and_call_original
 
@@ -14,7 +14,7 @@ describe ActiveRecordViews::ChecksumCache do
       end
     end
 
-    context 'with existing table' do
+    context 'existing table with current structure' do
       before do
         ActiveRecordViews::ChecksumCache.new(connection)
         expect(connection.table_exists?('active_record_views')).to eq true
@@ -27,7 +27,7 @@ describe ActiveRecordViews::ChecksumCache do
       end
     end
 
-    context 'with old table' do
+    context 'existing table without class name' do
       before do
         connection.execute 'CREATE TABLE active_record_views(name text PRIMARY KEY, checksum text NOT NULL);'
 
