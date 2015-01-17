@@ -4,8 +4,12 @@ describe ActiveRecordViews do
   describe '.create_view' do
     let(:connection) { ActiveRecord::Base.connection }
 
-    def create_test_view(sql)
-      ActiveRecordViews.create_view connection, 'test', 'Test', sql
+    def create_test_view(sql, options = {})
+      ActiveRecordViews.create_view connection, 'test', 'Test', sql, options
+    end
+
+    def drop_test_view
+      ActiveRecordViews.drop_view connection, 'test'
     end
 
     def test_view_sql
@@ -21,6 +25,14 @@ describe ActiveRecordViews do
         SELECT table_name
         FROM information_schema.views
         WHERE table_schema = 'public'
+      SQL
+    end
+
+    def test_materialized_view_sql
+      connection.select_value(<<-SQL).try(&:squish)
+        SELECT definition
+        FROM pg_matviews
+        WHERE schemaname = 'public' AND matviewname = 'test'
       SQL
     end
 
@@ -133,6 +145,32 @@ describe ActiveRecordViews do
           expect(test_view_sql).to eq 'SELECT 1 AS id;'
         end
       end
+    end
+
+    it 'creates and drops materialized views' do
+      create_test_view 'select 123 as id', materialized: true
+      expect(test_view_sql).to eq nil
+      expect(test_materialized_view_sql).to eq 'SELECT 123 AS id;'
+
+      drop_test_view
+      expect(test_view_sql).to eq nil
+      expect(test_materialized_view_sql).to eq nil
+    end
+
+    it 'replaces a normal view with a materialized view' do
+      create_test_view 'select 11 as id'
+      create_test_view 'select 22 as id', materialized: true
+
+      expect(test_view_sql).to eq nil
+      expect(test_materialized_view_sql).to eq 'SELECT 22 AS id;'
+    end
+
+    it 'replaces a materialized view with a normal view' do
+      create_test_view 'select 22 as id', materialized: true
+      create_test_view 'select 11 as id'
+
+      expect(test_view_sql).to eq 'SELECT 11 AS id;'
+      expect(test_materialized_view_sql).to eq nil
     end
   end
 

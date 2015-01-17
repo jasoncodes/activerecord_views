@@ -112,5 +112,31 @@ describe ActiveRecordViews::Extension do
         end
       }.to raise_error ArgumentError, /^Unknown key: :?blargh/
     end
+
+    it 'creates/refreshes/drops materialized views' do
+      with_temp_sql_dir do |temp_dir|
+        sql_file = File.join(temp_dir, 'materialized_view_test_model.sql')
+        File.write sql_file, 'SELECT 123 AS id;'
+
+        class MaterializedViewTestModel < ActiveRecord::Base
+          is_view materialized: true
+        end
+
+        expect {
+          MaterializedViewTestModel.first!
+        }.to raise_error ActiveRecord::StatementInvalid, /materialized view "materialized_view_test_models" has not been populated/
+
+        MaterializedViewTestModel.refresh_view!
+
+        expect(MaterializedViewTestModel.first!.id).to eq 123
+
+        File.unlink sql_file
+        test_request
+
+        expect {
+          MaterializedViewTestModel.first!
+        }.to raise_error ActiveRecord::StatementInvalid, /relation "materialized_view_test_models" does not exist/
+      end
+    end
   end
 end

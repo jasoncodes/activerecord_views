@@ -33,6 +33,10 @@ module ActiveRecordViews
 
         ActiveRecordViews.create_view self.connection, self.table_name, self.name, sql, self.view_options
       end
+
+      def refresh_view!
+        connection.execute "REFRESH MATERIALIZED VIEW #{connection.quote_table_name self.table_name};"
+      end
     end
   end
 end

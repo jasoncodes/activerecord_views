@@ -28,6 +28,15 @@ RSpec.configure do |config|
     view_names.each do |view_name|
       connection.execute "DROP VIEW IF EXISTS #{connection.quote_table_name view_name} CASCADE"
     end
+
+    materialized_view_names = connection.select_values <<-SQL
+      SELECT matviewname
+      FROM pg_matviews
+      WHERE schemaname = 'public'
+    SQL
+    materialized_view_names.each do |view_name|
+      connection.execute "DROP MATERIALIZED VIEW IF EXISTS #{connection.quote_table_name view_name} CASCADE"
+    end
   end
 
 end

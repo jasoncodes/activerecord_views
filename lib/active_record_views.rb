@@ -54,20 +54,29 @@ module ActiveRecordViews
   end
 
   def self.create_view(base_connection, name, class_name, sql, options = {})
-    options.assert_valid_keys
+    options.assert_valid_keys :materialized
 
     without_transaction base_connection do |connection|
       cache = ActiveRecordViews::ChecksumCache.new(connection)
       data = {class_name: class_name, checksum: Digest::SHA1.hexdigest(sql)}
       return if cache.get(name) == data
 
-      begin
-        connection.execute "CREATE OR REPLACE VIEW #{connection.quote_table_name name} AS #{sql}"
-      rescue ActiveRecord::StatementInvalid
+      drop_and_create = if options[:materialized]
+        true
+      else
+        begin
+          connection.execute "CREATE OR REPLACE VIEW #{connection.quote_table_name name} AS #{sql}"
+          false
+        rescue ActiveRecord::StatementInvalid
+          true
+        end
+      end
+
+      if drop_and_create
         connection.transaction :requires_new => true do
           without_dependencies connection, name do
             execute_drop_view connection, name
-            execute_create_view connection, name, sql
+            execute_create_view connection, name, sql, options
           end
         end
       end
@@ -84,19 +93,42 @@ module ActiveRecordViews
     end
   end
 
-  def self.execute_create_view(connection, name, sql)
-    connection.execute "CREATE VIEW #{connection.quote_table_name name} AS #{sql};"
+  def self.execute_create_view(connection, name, sql, options)
+    options.assert_valid_keys :materialized
+    sql = sql.sub(/;\s*/, '')
+
+    if options[:materialized]
+      connection.execute "CREATE MATERIALIZED VIEW #{connection.quote_table_name name} AS #{sql} WITH NO DATA;"
+    else
+      connection.execute "CREATE VIEW #{connection.quote_table_name name} AS #{sql};"
+    end
   end
 
   def self.execute_drop_view(connection, name)
-    connection.execute "DROP VIEW IF EXISTS #{connection.quote_table_name name};"
+    if materialized_view?(connection, name)
+      connection.execute "DROP MATERIALIZED VIEW IF EXISTS #{connection.quote_table_name name};"
+    else
+      connection.execute "DROP VIEW IF EXISTS #{connection.quote_table_name name};"
+    end
   end
 
   def self.view_exists?(connection, name)
     connection.select_value(<<-SQL).present?
       SELECT 1
       FROM information_schema.views
-      WHERE table_schema = 'public' AND table_name = #{connection.quote name};
+      WHERE table_schema = 'public' AND table_name = #{connection.quote name}
+      UNION ALL
+      SELECT 1
+      FROM pg_matviews
+      WHERE schemaname = 'public' AND matviewname = #{connection.quote name};
+    SQL
+  end
+
+  def self.materialized_view?(connection, name)
+    connection.select_value(<<-SQL).present?
+      SELECT 1
+      FROM pg_matviews
+      WHERE schemaname = 'public' AND matviewname = #{connection.quote name};
     SQL
   end
 
@@ -150,7 +182,7 @@ module ActiveRecordViews
         class_name.constantize
       rescue NameError => e
         raise unless e.missing_name?(class_name)
-        execute_create_view connection, dependency_name, definition
+        execute_create_view connection, dependency_name, definition, {} # FIXME
       end
     end
   end
