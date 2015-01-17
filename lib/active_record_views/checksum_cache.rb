@@ -30,8 +30,29 @@ module ActiveRecordViews
     def set(name, data)
       if data
         data.assert_valid_keys :class_name, :checksum
-        if @connection.update("UPDATE active_record_views SET class_name = #{@connection.quote data[:class_name]}, checksum = #{@connection.quote data[:checksum]} WHERE name = #{@connection.quote name}") == 0
-          @connection.insert "INSERT INTO active_record_views (name, class_name, checksum) VALUES (#{@connection.quote name}, #{@connection.quote data[:class_name]}, #{@connection.quote data[:checksum]})"
+
+        rows_updated = @connection.update(<<-SQL)
+          UPDATE active_record_views
+          SET
+            class_name = #{@connection.quote data[:class_name]},
+            checksum = #{@connection.quote data[:checksum]}
+          WHERE
+            name = #{@connection.quote name}
+          ;
+        SQL
+
+        if rows_updated == 0
+          @connection.insert <<-SQL
+            INSERT INTO active_record_views (
+              name,
+              class_name,
+              checksum
+            ) VALUES (
+              #{@connection.quote name},
+              #{@connection.quote data[:class_name]},
+              #{@connection.quote data[:checksum]}
+            )
+          SQL
         end
       else
         @connection.delete "DELETE FROM active_record_views WHERE name = #{@connection.quote name}"
