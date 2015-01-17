@@ -172,6 +172,10 @@ describe ActiveRecordViews do
       expect(test_view_sql).to eq 'SELECT 11 AS id;'
       expect(test_materialized_view_sql).to eq nil
     end
+
+    it 'can test if materialized views can be refreshed concurrently' do
+      expect(ActiveRecordViews.supports_concurrent_refresh?(connection)).to be true
+    end
   end
 
   describe '.without_transaction' do

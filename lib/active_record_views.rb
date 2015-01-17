@@ -132,6 +132,10 @@ module ActiveRecordViews
     SQL
   end
 
+  def self.supports_concurrent_refresh?(connection)
+    connection.raw_connection.server_version >= 90400
+  end
+
   def self.get_view_dependencies(connection, name)
     connection.select_rows <<-SQL
       WITH RECURSIVE dependants AS (
