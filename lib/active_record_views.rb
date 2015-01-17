@@ -156,12 +156,13 @@ module ActiveRecordViews
 
       SELECT
         oid::regclass::text AS name,
-        class_name,
-        pg_catalog.pg_get_viewdef(oid) AS definition
+        MIN(class_name) AS class_name,
+        pg_catalog.pg_get_viewdef(oid) AS definition,
+        MIN(options::text) AS options_json
       FROM dependants
       INNER JOIN active_record_views ON active_record_views.name = oid::regclass::text
       WHERE level > 0
-      GROUP BY oid, class_name
+      GROUP BY oid
       ORDER BY MAX(level)
       ;
     SQL
@@ -175,18 +176,19 @@ module ActiveRecordViews
 
     dependencies = get_view_dependencies(connection, name)
 
-    dependencies.reverse.each do |dependency_name, _, _|
+    dependencies.reverse.each do |dependency_name, _, _, _|
       execute_drop_view connection, dependency_name
     end
 
     yield
 
-    dependencies.each do |dependency_name, class_name, definition|
+    dependencies.each do |dependency_name, class_name, definition, options_json|
       begin
         class_name.constantize
       rescue NameError => e
         raise unless e.missing_name?(class_name)
-        execute_create_view connection, dependency_name, definition, {} # FIXME
+        options = JSON.load(options_json).symbolize_keys
+        execute_create_view connection, dependency_name, definition, options
       end
     end
   end

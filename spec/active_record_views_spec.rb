@@ -36,6 +36,14 @@ describe ActiveRecordViews do
       SQL
     end
 
+    def materialized_view_names
+      connection.select_values <<-SQL
+        SELECT matviewname
+        FROM pg_matviews
+        WHERE schemaname = 'public'
+      SQL
+    end
+
     it 'creates database view' do
       expect(test_view_sql).to be_nil
       create_test_view 'select 1 as id'
@@ -176,6 +184,15 @@ describe ActiveRecordViews do
 
     it 'can test if materialized views can be refreshed concurrently' do
       expect(ActiveRecordViews.supports_concurrent_refresh?(connection)).to be true
+    end
+
+    it 'preserves materialized view if dropping/recreating' do
+      ActiveRecordViews.create_view connection, 'test1', 'Test1', 'SELECT 1 AS foo'
+      ActiveRecordViews.create_view connection, 'test2', 'Test2', 'SELECT * FROM test1', materialized: true
+      ActiveRecordViews.create_view connection, 'test1', 'Test1', 'SELECT 2 AS bar, 1 AS foo'
+
+      expect(materialized_view_names).to eq %w[test2]
+      expect(view_names).to eq %w[test1]
     end
   end
 
