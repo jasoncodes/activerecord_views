@@ -62,7 +62,6 @@ module ActiveRecordViews
       begin
         connection.execute "CREATE OR REPLACE VIEW #{connection.quote_table_name name} AS #{sql}"
       rescue ActiveRecord::StatementInvalid
-        raise unless view_exists?(connection, name)
         connection.transaction :requires_new => true do
           without_dependencies connection, name do
             execute_drop_view connection, name
@@ -131,6 +130,11 @@ module ActiveRecordViews
   end
 
   def self.without_dependencies(connection, name)
+    unless view_exists?(connection, name)
+      yield
+      return
+    end
+
     dependencies = get_view_dependencies(connection, name)
 
     dependencies.reverse.each do |dependency_name, _, _|
