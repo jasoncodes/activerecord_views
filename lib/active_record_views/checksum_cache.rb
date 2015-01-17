@@ -18,24 +18,39 @@ module ActiveRecordViews
         table_exists = false
       end
 
+      if table_exists && !@connection.column_exists?('active_record_views', 'options')
+        @connection.execute "ALTER TABLE active_record_views ADD COLUMN options json NOT NULL DEFAULT '{}';"
+      end
+
       unless table_exists
-        @connection.execute 'CREATE TABLE active_record_views(name text PRIMARY KEY, class_name text NOT NULL UNIQUE, checksum text NOT NULL);'
+        @connection.execute "CREATE TABLE active_record_views(name text PRIMARY KEY, class_name text NOT NULL UNIQUE, checksum text NOT NULL, options json NOT NULL DEFAULT '{}');"
       end
     end
 
     def get(name)
-      @connection.select_one("SELECT class_name, checksum FROM active_record_views WHERE name = #{@connection.quote name}").try(:symbolize_keys)
+      if data = @connection.select_one("SELECT class_name, checksum, options FROM active_record_views WHERE name = #{@connection.quote name}")
+        data.symbolize_keys!
+        data[:options] = JSON.load(data[:options]).symbolize_keys
+        data
+      end
     end
 
     def set(name, data)
       if data
-        data.assert_valid_keys :class_name, :checksum
+        data.assert_valid_keys :class_name, :checksum, :options
+
+        options = data[:options] || {}
+        unless options.keys.all? { |key| key.is_a?(Symbol) }
+          raise ArgumentError, 'option keys must be symbols'
+        end
+        options_json = JSON.dump(options)
 
         rows_updated = @connection.update(<<-SQL)
           UPDATE active_record_views
           SET
             class_name = #{@connection.quote data[:class_name]},
-            checksum = #{@connection.quote data[:checksum]}
+            checksum = #{@connection.quote data[:checksum]},
+            options = #{@connection.quote options_json}
           WHERE
             name = #{@connection.quote name}
           ;
@@ -46,11 +61,13 @@ module ActiveRecordViews
             INSERT INTO active_record_views (
               name,
               class_name,
-              checksum
+              checksum,
+              options
             ) VALUES (
               #{@connection.quote name},
               #{@connection.quote data[:class_name]},
-              #{@connection.quote data[:checksum]}
+              #{@connection.quote data[:checksum]},
+              #{@connection.quote options_json}
             )
           SQL
         end

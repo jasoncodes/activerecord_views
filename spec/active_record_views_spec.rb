@@ -42,13 +42,14 @@ describe ActiveRecordViews do
       expect(test_view_sql).to eq 'SELECT 1 AS id;'
     end
 
-    it 'records checksum and class name' do
-      create_test_view 'select 1 as id'
+    it 'records checksum, class name, and options' do
+      create_test_view 'select 1 as id', materialized: true
       expect(connection.select_all('select * from active_record_views').to_a).to eq [
         {
           'name' => 'test',
           'class_name' => 'Test',
-          'checksum' => Digest::SHA1.hexdigest('select 1 as id')
+          'checksum' => Digest::SHA1.hexdigest('select 1 as id'),
+          'options' => '{"materialized":true}',
         }
       ]
     end

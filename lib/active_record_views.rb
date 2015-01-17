@@ -58,7 +58,7 @@ module ActiveRecordViews
 
     without_transaction base_connection do |connection|
       cache = ActiveRecordViews::ChecksumCache.new(connection)
-      data = {class_name: class_name, checksum: Digest::SHA1.hexdigest(sql)}
+      data = {class_name: class_name, checksum: Digest::SHA1.hexdigest(sql), options: options}
       return if cache.get(name) == data
 
       drop_and_create = if options[:materialized]
