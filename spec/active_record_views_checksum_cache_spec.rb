@@ -11,6 +11,8 @@ describe ActiveRecordViews::ChecksumCache do
         expect(connection.table_exists?('active_record_views')).to eq false
         ActiveRecordViews::ChecksumCache.new(connection)
         expect(connection.table_exists?('active_record_views')).to eq true
+
+        expect(connection.column_exists?('active_record_views', 'class_name')).to eq true
       end
     end
 
