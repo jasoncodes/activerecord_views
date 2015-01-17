@@ -126,7 +126,9 @@ describe ActiveRecordViews::Extension do
           MaterializedViewTestModel.first!
         }.to raise_error ActiveRecord::StatementInvalid, /materialized view "materialized_view_test_models" has not been populated/
 
+        expect(MaterializedViewTestModel.view_populated?).to eq false
         MaterializedViewTestModel.refresh_view!
+        expect(MaterializedViewTestModel.view_populated?).to eq true
 
         expect(MaterializedViewTestModel.first!.id).to eq 123
 
@@ -137,6 +139,16 @@ describe ActiveRecordViews::Extension do
           MaterializedViewTestModel.first!
         }.to raise_error ActiveRecord::StatementInvalid, /relation "materialized_view_test_models" does not exist/
       end
+    end
+
+    it 'raises an error for `view_populated?` if view is not materialized' do
+      class NonMaterializedViewPopulatedTestModel < ActiveRecord::Base
+        is_view 'SELECT 1 AS id;'
+      end
+
+      expect {
+        NonMaterializedViewPopulatedTestModel.view_populated?
+      }.to raise_error ArgumentError, 'not a materialized view'
     end
 
     it 'supports refreshing materialized views concurrently' do

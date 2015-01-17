@@ -38,6 +38,20 @@ module ActiveRecordViews
         options.assert_valid_keys :concurrent
         connection.execute "REFRESH MATERIALIZED VIEW#{' CONCURRENTLY' if options[:concurrent]} #{connection.quote_table_name self.table_name};"
       end
+
+      def view_populated?
+        value = connection.select_value(<<-SQL)
+          SELECT ispopulated
+          FROM pg_matviews
+          WHERE schemaname = 'public' AND matviewname = #{connection.quote self.table_name};
+        SQL
+
+        if value.nil?
+          raise ArgumentError, 'not a materialized view'
+        end
+
+        ActiveRecord::ConnectionAdapters::Column::TRUE_VALUES.include?(value)
+      end
     end
   end
 end
