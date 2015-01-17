@@ -65,8 +65,8 @@ module ActiveRecordViews
         raise unless view_exists?(connection, name)
         connection.transaction :requires_new => true do
           without_dependencies connection, name do
-            connection.execute "DROP VIEW #{connection.quote_table_name name}"
-            connection.execute "CREATE VIEW #{connection.quote_table_name name} AS #{sql}"
+            execute_drop_view connection, name
+            execute_create_view connection, name, sql
           end
         end
       end
@@ -78,9 +78,17 @@ module ActiveRecordViews
   def self.drop_view(base_connection, name)
     without_transaction base_connection do |connection|
       cache = ActiveRecordViews::ChecksumCache.new(connection)
-      connection.execute "DROP VIEW IF EXISTS #{connection.quote_table_name name}"
+      execute_drop_view connection, name
       cache.set name, nil
     end
+  end
+
+  def self.execute_create_view(connection, name, sql)
+    connection.execute "CREATE VIEW #{connection.quote_table_name name} AS #{sql};"
+  end
+
+  def self.execute_drop_view(connection, name)
+    connection.execute "DROP VIEW IF EXISTS #{connection.quote_table_name name};"
   end
 
   def self.view_exists?(connection, name)
@@ -126,7 +134,7 @@ module ActiveRecordViews
     dependencies = get_view_dependencies(connection, name)
 
     dependencies.reverse.each do |dependency_name, _, _|
-      connection.execute "DROP VIEW #{dependency_name};"
+      execute_drop_view connection, dependency_name
     end
 
     yield
@@ -136,7 +144,7 @@ module ActiveRecordViews
         class_name.constantize
       rescue NameError => e
         raise unless e.missing_name?(class_name)
-        connection.execute "CREATE VIEW #{dependency_name} AS #{definition};"
+        execute_create_view connection, dependency_name, definition
       end
     end
   end
