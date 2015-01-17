@@ -138,5 +138,21 @@ describe ActiveRecordViews::Extension do
         }.to raise_error ActiveRecord::StatementInvalid, /relation "materialized_view_test_models" does not exist/
       end
     end
+
+    it 'supports refreshing materialized views concurrently' do
+      class MaterializedViewRefreshTestModel < ActiveRecord::Base
+        is_view 'SELECT 1 AS id;', materialized: true
+      end
+      class MaterializedViewConcurrentRefreshTestModel < ActiveRecord::Base
+        is_view 'SELECT 1 AS id;', materialized: true, unique_columns: [:id]
+      end
+      MaterializedViewConcurrentRefreshTestModel.refresh_view!
+
+      expect(ActiveRecord::Base.connection).to receive(:execute).with('REFRESH MATERIALIZED VIEW "materialized_view_refresh_test_models";').once.and_call_original
+      expect(ActiveRecord::Base.connection).to receive(:execute).with('REFRESH MATERIALIZED VIEW CONCURRENTLY "materialized_view_concurrent_refresh_test_models";').once.and_call_original
+
+      MaterializedViewRefreshTestModel.refresh_view!
+      MaterializedViewConcurrentRefreshTestModel.refresh_view! concurrent: true
+    end
   end
 end
