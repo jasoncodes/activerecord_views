@@ -54,7 +54,7 @@ module ActiveRecordViews
   end
 
   def self.create_view(base_connection, name, class_name, sql, options = {})
-    options.assert_valid_keys :materialized
+    options.assert_valid_keys :materialized, :unique_columns
 
     without_transaction base_connection do |connection|
       cache = ActiveRecordViews::ChecksumCache.new(connection)
@@ -64,6 +64,7 @@ module ActiveRecordViews
       drop_and_create = if options[:materialized]
         true
       else
+        raise ArgumentError, 'unique_columns option requires view to be materialized' if options[:unique_columns]
         begin
           connection.execute "CREATE OR REPLACE VIEW #{connection.quote_table_name name} AS #{sql}"
           false
@@ -94,13 +95,22 @@ module ActiveRecordViews
   end
 
   def self.execute_create_view(connection, name, sql, options)
-    options.assert_valid_keys :materialized
+    options.assert_valid_keys :materialized, :unique_columns
     sql = sql.sub(/;\s*/, '')
 
     if options[:materialized]
       connection.execute "CREATE MATERIALIZED VIEW #{connection.quote_table_name name} AS #{sql} WITH NO DATA;"
     else
       connection.execute "CREATE VIEW #{connection.quote_table_name name} AS #{sql};"
+    end
+
+    if options[:unique_columns]
+      connection.execute <<-SQL
+        CREATE UNIQUE INDEX #{connection.quote_table_name "#{name}_pkey"}
+        ON #{connection.quote_table_name name}(
+          #{options[:unique_columns].map { |column_name| connection.quote_table_name(column_name) }.join(', ')}
+        );
+      SQL
     end
   end
 

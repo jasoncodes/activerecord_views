@@ -194,6 +194,18 @@ describe ActiveRecordViews do
       expect(materialized_view_names).to eq %w[test2]
       expect(view_names).to eq %w[test1]
     end
+
+    it 'supports creating unique indexes on materialized views' do
+      create_test_view 'select 1 as foo, 2 as bar, 3 as baz', materialized: true, unique_columns: [:foo, 'bar']
+      index_sql = connection.select_value("SELECT indexdef FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'test_pkey';")
+      expect(index_sql).to eq 'CREATE UNIQUE INDEX test_pkey ON test USING btree (foo, bar)'
+    end
+
+    it 'errors if trying to create unique index on non-materialized view' do
+      expect {
+        create_test_view 'select 1 as foo, 2 as bar, 3 as baz', materialized: false, unique_columns: [:foo, 'bar']
+      }.to raise_error ArgumentError, 'unique_columns option requires view to be materialized'
+    end
   end
 
   describe '.without_transaction' do
