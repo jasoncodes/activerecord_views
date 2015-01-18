@@ -97,6 +97,14 @@ describe ActiveRecordViews::Extension do
       expect(ModifiedB.first.attributes.except(nil)).to eq('new_name' => 22)
     end
 
+    it 'successfully restores dependant view when temporarily dropping dependency' do
+      ActiveRecordViews.create_view ActiveRecord::Base.connection, 'dependency_as', 'DependencyA', 'SELECT 42 AS foo, 1 AS id;'
+      ActiveRecordViews.create_view ActiveRecord::Base.connection, 'dependency_bs', 'DependencyB', 'SELECT * FROM dependency_as;'
+
+      expect(DependencyA.first.id).to eq 2
+      expect(DependencyB.first.id).to eq 2
+    end
+
     it 'errors if more than one argument is specified' do
       expect {
         class TooManyArguments < ActiveRecord::Base

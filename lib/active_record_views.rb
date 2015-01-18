@@ -185,9 +185,13 @@ module ActiveRecordViews
     end
 
     dependencies = get_view_dependencies(connection, name)
+    cache = ActiveRecordViews::ChecksumCache.new(connection)
+    dependency_metadata = {}
 
     dependencies.reverse.each do |dependency_name, _, _, _|
       execute_drop_view connection, dependency_name
+      dependency_metadata[dependency_name] = cache.get(dependency_name)
+      cache.set dependency_name, nil
     end
 
     yield
@@ -199,6 +203,7 @@ module ActiveRecordViews
         raise unless e.missing_name?(class_name)
         options = JSON.load(options_json).symbolize_keys
         execute_create_view connection, dependency_name, definition, options
+        cache.set dependency_name, dependency_metadata[dependency_name]
       end
     end
   end
