@@ -4,8 +4,12 @@ describe ActiveRecordViews do
   describe '.create_view' do
     let(:connection) { ActiveRecord::Base.connection }
 
-    def create_test_view(sql)
-      ActiveRecordViews.create_view connection, 'test', 'Test', sql
+    def create_test_view(sql, options = {})
+      ActiveRecordViews.create_view connection, 'test', 'Test', sql, options
+    end
+
+    def drop_test_view
+      ActiveRecordViews.drop_view connection, 'test'
     end
 
     def test_view_sql
@@ -24,19 +28,36 @@ describe ActiveRecordViews do
       SQL
     end
 
+    def test_materialized_view_sql
+      connection.select_value(<<-SQL).try(&:squish)
+        SELECT definition
+        FROM pg_matviews
+        WHERE schemaname = 'public' AND matviewname = 'test'
+      SQL
+    end
+
+    def materialized_view_names
+      connection.select_values <<-SQL
+        SELECT matviewname
+        FROM pg_matviews
+        WHERE schemaname = 'public'
+      SQL
+    end
+
     it 'creates database view' do
       expect(test_view_sql).to be_nil
       create_test_view 'select 1 as id'
       expect(test_view_sql).to eq 'SELECT 1 AS id;'
     end
 
-    it 'records checksum and class name' do
-      create_test_view 'select 1 as id'
+    it 'records checksum, class name, and options' do
+      create_test_view 'select 1 as id', materialized: true
       expect(connection.select_all('select * from active_record_views').to_a).to eq [
         {
           'name' => 'test',
           'class_name' => 'Test',
-          'checksum' => Digest::SHA1.hexdigest('select 1 as id')
+          'checksum' => Digest::SHA1.hexdigest('select 1 as id'),
+          'options' => '{"materialized":true}',
         }
       ]
     end
@@ -133,6 +154,57 @@ describe ActiveRecordViews do
           expect(test_view_sql).to eq 'SELECT 1 AS id;'
         end
       end
+    end
+
+    it 'creates and drops materialized views' do
+      create_test_view 'select 123 as id', materialized: true
+      expect(test_view_sql).to eq nil
+      expect(test_materialized_view_sql).to eq 'SELECT 123 AS id;'
+
+      drop_test_view
+      expect(test_view_sql).to eq nil
+      expect(test_materialized_view_sql).to eq nil
+    end
+
+    it 'replaces a normal view with a materialized view' do
+      create_test_view 'select 11 as id'
+      create_test_view 'select 22 as id', materialized: true
+
+      expect(test_view_sql).to eq nil
+      expect(test_materialized_view_sql).to eq 'SELECT 22 AS id;'
+    end
+
+    it 'replaces a materialized view with a normal view' do
+      create_test_view 'select 22 as id', materialized: true
+      create_test_view 'select 11 as id'
+
+      expect(test_view_sql).to eq 'SELECT 11 AS id;'
+      expect(test_materialized_view_sql).to eq nil
+    end
+
+    it 'can test if materialized views can be refreshed concurrently' do
+      expect(ActiveRecordViews.supports_concurrent_refresh?(connection)).to be true
+    end
+
+    it 'preserves materialized view if dropping/recreating' do
+      ActiveRecordViews.create_view connection, 'test1', 'Test1', 'SELECT 1 AS foo'
+      ActiveRecordViews.create_view connection, 'test2', 'Test2', 'SELECT * FROM test1', materialized: true
+      ActiveRecordViews.create_view connection, 'test1', 'Test1', 'SELECT 2 AS bar, 1 AS foo'
+
+      expect(materialized_view_names).to eq %w[test2]
+      expect(view_names).to eq %w[test1]
+    end
+
+    it 'supports creating unique indexes on materialized views' do
+      create_test_view 'select 1 as foo, 2 as bar, 3 as baz', materialized: true, unique_columns: [:foo, 'bar']
+      index_sql = connection.select_value("SELECT indexdef FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'test_pkey';")
+      expect(index_sql).to eq 'CREATE UNIQUE INDEX test_pkey ON test USING btree (foo, bar)'
+    end
+
+    it 'errors if trying to create unique index on non-materialized view' do
+      expect {
+        create_test_view 'select 1 as foo, 2 as bar, 3 as baz', materialized: false, unique_columns: [:foo, 'bar']
+      }.to raise_error ArgumentError, 'unique_columns option requires view to be materialized'
     end
   end
 

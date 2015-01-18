@@ -11,7 +11,15 @@ module ActiveRecordViews
     end
 
     module ClassMethods
-      def is_view(sql = nil)
+      def is_view(*args)
+        return if ActiveRecordViews::Extension.currently_migrating?
+
+        cattr_accessor :view_options
+        self.view_options = args.extract_options!
+
+        raise ArgumentError, "wrong number of arguments (#{args.size} for 0..1)" unless (0..1).cover?(args.size)
+        sql = args.shift
+
         sql ||= begin
           sql_path = ActiveRecordViews.find_sql_file(self.name.underscore)
           ActiveRecordViews.register_for_reload self, sql_path
@@ -23,9 +31,26 @@ module ActiveRecordViews
           end
         end
 
-        unless ActiveRecordViews::Extension.currently_migrating?
-          ActiveRecordViews.create_view self.connection, self.table_name, self.name, sql
+        ActiveRecordViews.create_view self.connection, self.table_name, self.name, sql, self.view_options
+      end
+
+      def refresh_view!(options = {})
+        options.assert_valid_keys :concurrent
+        connection.execute "REFRESH MATERIALIZED VIEW#{' CONCURRENTLY' if options[:concurrent]} #{connection.quote_table_name self.table_name};"
+      end
+
+      def view_populated?
+        value = connection.select_value(<<-SQL)
+          SELECT ispopulated
+          FROM pg_matviews
+          WHERE schemaname = 'public' AND matviewname = #{connection.quote self.table_name};
+        SQL
+
+        if value.nil?
+          raise ArgumentError, 'not a materialized view'
         end
+
+        ActiveRecord::ConnectionAdapters::Column::TRUE_VALUES.include?(value)
       end
     end
   end

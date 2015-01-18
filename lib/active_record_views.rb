@@ -53,20 +53,31 @@ module ActiveRecordViews
     end
   end
 
-  def self.create_view(base_connection, name, class_name, sql)
+  def self.create_view(base_connection, name, class_name, sql, options = {})
+    options.assert_valid_keys :materialized, :unique_columns
+
     without_transaction base_connection do |connection|
       cache = ActiveRecordViews::ChecksumCache.new(connection)
-      data = {class_name: class_name, checksum: Digest::SHA1.hexdigest(sql)}
+      data = {class_name: class_name, checksum: Digest::SHA1.hexdigest(sql), options: options}
       return if cache.get(name) == data
 
-      begin
-        connection.execute "CREATE OR REPLACE VIEW #{connection.quote_table_name name} AS #{sql}"
-      rescue ActiveRecord::StatementInvalid
-        raise unless view_exists?(connection, name)
+      drop_and_create = if options[:materialized]
+        true
+      else
+        raise ArgumentError, 'unique_columns option requires view to be materialized' if options[:unique_columns]
+        begin
+          connection.execute "CREATE OR REPLACE VIEW #{connection.quote_table_name name} AS #{sql}"
+          false
+        rescue ActiveRecord::StatementInvalid
+          true
+        end
+      end
+
+      if drop_and_create
         connection.transaction :requires_new => true do
           without_dependencies connection, name do
-            connection.execute "DROP VIEW #{connection.quote_table_name name}"
-            connection.execute "CREATE VIEW #{connection.quote_table_name name} AS #{sql}"
+            execute_drop_view connection, name
+            execute_create_view connection, name, sql, options
           end
         end
       end
@@ -78,8 +89,36 @@ module ActiveRecordViews
   def self.drop_view(base_connection, name)
     without_transaction base_connection do |connection|
       cache = ActiveRecordViews::ChecksumCache.new(connection)
-      connection.execute "DROP VIEW IF EXISTS #{connection.quote_table_name name}"
+      execute_drop_view connection, name
       cache.set name, nil
+    end
+  end
+
+  def self.execute_create_view(connection, name, sql, options)
+    options.assert_valid_keys :materialized, :unique_columns
+    sql = sql.sub(/;\s*/, '')
+
+    if options[:materialized]
+      connection.execute "CREATE MATERIALIZED VIEW #{connection.quote_table_name name} AS #{sql} WITH NO DATA;"
+    else
+      connection.execute "CREATE VIEW #{connection.quote_table_name name} AS #{sql};"
+    end
+
+    if options[:unique_columns]
+      connection.execute <<-SQL
+        CREATE UNIQUE INDEX #{connection.quote_table_name "#{name}_pkey"}
+        ON #{connection.quote_table_name name}(
+          #{options[:unique_columns].map { |column_name| connection.quote_table_name(column_name) }.join(', ')}
+        );
+      SQL
+    end
+  end
+
+  def self.execute_drop_view(connection, name)
+    if materialized_view?(connection, name)
+      connection.execute "DROP MATERIALIZED VIEW IF EXISTS #{connection.quote_table_name name};"
+    else
+      connection.execute "DROP VIEW IF EXISTS #{connection.quote_table_name name};"
     end
   end
 
@@ -87,8 +126,24 @@ module ActiveRecordViews
     connection.select_value(<<-SQL).present?
       SELECT 1
       FROM information_schema.views
-      WHERE table_schema = 'public' AND table_name = #{connection.quote name};
+      WHERE table_schema = 'public' AND table_name = #{connection.quote name}
+      UNION ALL
+      SELECT 1
+      FROM pg_matviews
+      WHERE schemaname = 'public' AND matviewname = #{connection.quote name};
     SQL
+  end
+
+  def self.materialized_view?(connection, name)
+    connection.select_value(<<-SQL).present?
+      SELECT 1
+      FROM pg_matviews
+      WHERE schemaname = 'public' AND matviewname = #{connection.quote name};
+    SQL
+  end
+
+  def self.supports_concurrent_refresh?(connection)
+    connection.raw_connection.server_version >= 90400
   end
 
   def self.get_view_dependencies(connection, name)
@@ -111,32 +166,39 @@ module ActiveRecordViews
 
       SELECT
         oid::regclass::text AS name,
-        class_name,
-        pg_catalog.pg_get_viewdef(oid) AS definition
+        MIN(class_name) AS class_name,
+        pg_catalog.pg_get_viewdef(oid) AS definition,
+        MIN(options::text) AS options_json
       FROM dependants
       INNER JOIN active_record_views ON active_record_views.name = oid::regclass::text
       WHERE level > 0
-      GROUP BY oid, class_name
+      GROUP BY oid
       ORDER BY MAX(level)
       ;
     SQL
   end
 
   def self.without_dependencies(connection, name)
+    unless view_exists?(connection, name)
+      yield
+      return
+    end
+
     dependencies = get_view_dependencies(connection, name)
 
-    dependencies.reverse.each do |dependency_name, _, _|
-      connection.execute "DROP VIEW #{dependency_name};"
+    dependencies.reverse.each do |dependency_name, _, _, _|
+      execute_drop_view connection, dependency_name
     end
 
     yield
 
-    dependencies.each do |dependency_name, class_name, definition|
+    dependencies.each do |dependency_name, class_name, definition, options_json|
       begin
         class_name.constantize
       rescue NameError => e
         raise unless e.missing_name?(class_name)
-        connection.execute "CREATE VIEW #{dependency_name} AS #{definition};"
+        options = JSON.load(options_json).symbolize_keys
+        execute_create_view connection, dependency_name, definition, options
       end
     end
   end

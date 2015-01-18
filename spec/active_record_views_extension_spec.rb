@@ -34,7 +34,8 @@ describe ActiveRecordViews::Extension do
           anything,
           'modified_file_test_models',
           'ModifiedFileTestModel',
-          sql
+          sql,
+          {}
         ).once.ordered
       end
 
@@ -94,6 +95,76 @@ describe ActiveRecordViews::Extension do
       ActiveRecordViews.create_view ActiveRecord::Base.connection, 'modified_bs', 'ModifiedB', 'SELECT old_name FROM modified_as;'
 
       expect(ModifiedB.first.attributes.except(nil)).to eq('new_name' => 22)
+    end
+
+    it 'errors if more than one argument is specified' do
+      expect {
+        class TooManyArguments < ActiveRecord::Base
+          is_view 'SELECT 1 AS ID;', 'SELECT 2 AS ID;'
+        end
+      }.to raise_error ArgumentError, 'wrong number of arguments (2 for 0..1)'
+    end
+
+    it 'errors if an invalid option is specified' do
+      expect {
+        class InvalidOption < ActiveRecord::Base
+          is_view 'SELECT 1 AS ID;', blargh: 123
+        end
+      }.to raise_error ArgumentError, /^Unknown key: :?blargh/
+    end
+
+    it 'creates/refreshes/drops materialized views' do
+      with_temp_sql_dir do |temp_dir|
+        sql_file = File.join(temp_dir, 'materialized_view_test_model.sql')
+        File.write sql_file, 'SELECT 123 AS id;'
+
+        class MaterializedViewTestModel < ActiveRecord::Base
+          is_view materialized: true
+        end
+
+        expect {
+          MaterializedViewTestModel.first!
+        }.to raise_error ActiveRecord::StatementInvalid, /materialized view "materialized_view_test_models" has not been populated/
+
+        expect(MaterializedViewTestModel.view_populated?).to eq false
+        MaterializedViewTestModel.refresh_view!
+        expect(MaterializedViewTestModel.view_populated?).to eq true
+
+        expect(MaterializedViewTestModel.first!.id).to eq 123
+
+        File.unlink sql_file
+        test_request
+
+        expect {
+          MaterializedViewTestModel.first!
+        }.to raise_error ActiveRecord::StatementInvalid, /relation "materialized_view_test_models" does not exist/
+      end
+    end
+
+    it 'raises an error for `view_populated?` if view is not materialized' do
+      class NonMaterializedViewPopulatedTestModel < ActiveRecord::Base
+        is_view 'SELECT 1 AS id;'
+      end
+
+      expect {
+        NonMaterializedViewPopulatedTestModel.view_populated?
+      }.to raise_error ArgumentError, 'not a materialized view'
+    end
+
+    it 'supports refreshing materialized views concurrently' do
+      class MaterializedViewRefreshTestModel < ActiveRecord::Base
+        is_view 'SELECT 1 AS id;', materialized: true
+      end
+      class MaterializedViewConcurrentRefreshTestModel < ActiveRecord::Base
+        is_view 'SELECT 1 AS id;', materialized: true, unique_columns: [:id]
+      end
+      MaterializedViewConcurrentRefreshTestModel.refresh_view!
+
+      expect(ActiveRecord::Base.connection).to receive(:execute).with('REFRESH MATERIALIZED VIEW "materialized_view_refresh_test_models";').once.and_call_original
+      expect(ActiveRecord::Base.connection).to receive(:execute).with('REFRESH MATERIALIZED VIEW CONCURRENTLY "materialized_view_concurrent_refresh_test_models";').once.and_call_original
+
+      MaterializedViewRefreshTestModel.refresh_view!
+      MaterializedViewConcurrentRefreshTestModel.refresh_view! concurrent: true
     end
   end
 end
