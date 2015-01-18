@@ -166,5 +166,27 @@ describe ActiveRecordViews::Extension do
       MaterializedViewRefreshTestModel.refresh_view!
       MaterializedViewConcurrentRefreshTestModel.refresh_view! concurrent: true
     end
+
+    it 'supports opportunistically refreshing materialized views concurrently' do
+      class MaterializedViewAutoRefreshTestModel < ActiveRecord::Base
+        is_view 'SELECT 1 AS id;', materialized: true, unique_columns: [:id]
+      end
+
+      expect(ActiveRecord::Base.connection).to receive(:execute).with('REFRESH MATERIALIZED VIEW "materialized_view_auto_refresh_test_models";').once.and_call_original
+      expect(ActiveRecord::Base.connection).to receive(:execute).with('REFRESH MATERIALIZED VIEW CONCURRENTLY "materialized_view_auto_refresh_test_models";').once.and_call_original
+
+      MaterializedViewAutoRefreshTestModel.refresh_view! concurrent: :auto
+      MaterializedViewAutoRefreshTestModel.refresh_view! concurrent: :auto
+    end
+
+    it 'raises an error when refreshing materialized views with invalid concurrent option' do
+      class MaterializedViewInvalidRefreshTestModel < ActiveRecord::Base
+        is_view 'SELECT 1 AS id;', materialized: true, unique_columns: [:id]
+      end
+
+      expect {
+        MaterializedViewAutoRefreshTestModel.refresh_view! concurrent: :blah
+      }.to raise_error ArgumentError, 'invalid concurrent option'
+    end
   end
 end

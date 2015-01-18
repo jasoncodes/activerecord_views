@@ -36,7 +36,19 @@ module ActiveRecordViews
 
       def refresh_view!(options = {})
         options.assert_valid_keys :concurrent
-        connection.execute "REFRESH MATERIALIZED VIEW#{' CONCURRENTLY' if options[:concurrent]} #{connection.quote_table_name self.table_name};"
+
+        concurrent = case options[:concurrent]
+        when nil, false
+          false
+        when true
+          true
+        when :auto
+          view_populated? && ActiveRecordViews.supports_concurrent_refresh?(connection)
+        else
+          raise ArgumentError, 'invalid concurrent option'
+        end
+
+        connection.execute "REFRESH MATERIALIZED VIEW#{' CONCURRENTLY' if concurrent} #{connection.quote_table_name self.table_name};"
       end
 
       def view_populated?
