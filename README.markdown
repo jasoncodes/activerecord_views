@@ -88,7 +88,7 @@ In order to keep things tidy and to avoid accidentally referencing a stale view,
 ActiveRecordViews.drop_view connection, 'account_balances'
 ```
 
-### Usage outside of Rails
+## Usage outside of Rails
 
 When included in a Ruby on Rails project, ActiveRecordViews will automatically detect `.sql` files alongside models in `app/models`.
 Outside of Rails, you will have to tell ActiveRecordViews where to find associated `.sql` files for models:
