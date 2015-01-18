@@ -18,7 +18,7 @@ Add this line to your application's `Gemfile`:
 gem 'activerecord_views'
 ```
 
-## Usage
+## Example
 
 app/models/account.rb:
 
@@ -66,6 +66,46 @@ p Account.first.balance
 Account.includes(:account_balance).find_each do |account|
   p account.balance
 end
+```
+
+## Materialized views
+
+ActiveRecordViews has support [PostgreSQL's materialized views](http://www.postgresql.org/docs/9.4/static/rules-materializedviews.html).
+By default, views execute their query to calculate the output every time they are accessed.
+Materialized views let you cache the output of views. This is useful for views which have expensive calculations. Your application can then trigger a refresh of the cached data as required.
+
+To configure an ActiveRecordViews model as being materialized, pass the `materialized: true` option to `is_view`:
+
+```ruby
+class AccountBalance < ActiveRecord::Base
+  is_view materialized: true
+end
+```
+
+Materialized views are not initially populated upon creation as this could greatly slow down application startup.
+An exception will be raised if you attempt to read from a view before it is populated.
+You can test if a materialized view has been populated with the `view_populated?` class method and trigger a refresh with the `refresh_view!` class method:
+
+```ruby
+AccountBalance.view_populated? # => false
+AccountBalance.refresh_view!
+AccountBalance.view_populated? # => true
+```
+
+PostgreSQL 9.4 supports refreshing materialized views concurrently. This allows other processes to continue reading old cached data while the view is being updated. To use this feature you must have define a unique index on the materialized view:
+
+```sql
+class AccountBalance < ActiveRecord::Base
+  is_view materialized: true, unique_columns: %w[account_id]
+end
+```
+
+Note: If your view has a single column as the unique key, you can also tell ActiveRecord about it by adding `self.primary_key = :account_id` in your model file. This is required for features such as `.find` and `.find_each` to work.
+
+Once you have defined the unique columns for the view, you can then use `concurrent: true` when refreshing:
+
+```ruby
+AccountBalance.refresh_view! concurrent: true
 ```
 
 ## Pre-populating views in Rails development mode
