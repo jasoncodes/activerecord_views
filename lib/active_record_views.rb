@@ -197,13 +197,22 @@ module ActiveRecordViews
     yield
 
     dependencies.each do |dependency_name, class_name, definition, options_json|
+      create_view_exception = begin
+        connection.transaction :requires_new => true do
+          options = JSON.load(options_json).symbolize_keys
+          execute_create_view connection, dependency_name, definition, options
+          cache.set dependency_name, dependency_metadata[dependency_name]
+        end
+        nil
+      rescue StandardError => e
+        e
+      end
+
       begin
         class_name.constantize
       rescue NameError => e
         raise unless e.missing_name?(class_name)
-        options = JSON.load(options_json).symbolize_keys
-        execute_create_view connection, dependency_name, definition, options
-        cache.set dependency_name, dependency_metadata[dependency_name]
+        raise create_view_exception unless create_view_exception.nil?
       end
     end
   end

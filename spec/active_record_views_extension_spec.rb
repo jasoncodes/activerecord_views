@@ -105,6 +105,14 @@ describe ActiveRecordViews::Extension do
       expect(DependencyB.first.id).to eq 2
     end
 
+    it 'sucessfully restore dependant view and dependency when loading from middle outwards' do
+      ActiveRecordViews.create_view ActiveRecord::Base.connection, 'dependency_as', 'DependencyA', 'SELECT 42 AS foo, 1 AS id;'
+      ActiveRecordViews.create_view ActiveRecord::Base.connection, 'dependency_bs', 'DependencyB', 'SELECT id FROM dependency_as;'
+      ActiveRecordViews.create_view ActiveRecord::Base.connection, 'dependency_cs', 'DependencyC', 'SELECT id FROM dependency_bs;'
+
+      expect(DependencyB.first.id).to eq 2
+    end
+
     it 'errors if more than one argument is specified' do
       expect {
         class TooManyArguments < ActiveRecord::Base
