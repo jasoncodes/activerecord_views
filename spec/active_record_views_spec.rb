@@ -13,7 +13,7 @@ describe ActiveRecordViews do
     end
 
     def test_view_sql
-      connection.select_value(<<-SQL).try(&:squish)
+      connection.select_value(<<-SQL.squish).try(&:squish)
         SELECT view_definition
         FROM information_schema.views
         WHERE table_schema = 'public' AND table_name = 'test'
@@ -21,7 +21,7 @@ describe ActiveRecordViews do
     end
 
     def view_names
-      connection.select_values <<-SQL
+      connection.select_values(<<-SQL.squish)
         SELECT table_name
         FROM information_schema.views
         WHERE table_schema = 'public'
@@ -29,7 +29,7 @@ describe ActiveRecordViews do
     end
 
     def test_materialized_view_sql
-      connection.select_value(<<-SQL).try(&:squish)
+      connection.select_value(<<-SQL.squish).try(&:squish)
         SELECT definition
         FROM pg_matviews
         WHERE schemaname = 'public' AND matviewname = 'test'
@@ -37,7 +37,7 @@ describe ActiveRecordViews do
     end
 
     def materialized_view_names
-      connection.select_values <<-SQL
+      connection.select_values(<<-SQL.squish)
         SELECT matviewname
         FROM pg_matviews
         WHERE schemaname = 'public'

@@ -20,7 +20,7 @@ RSpec.configure do |config|
 
     connection.execute 'DROP TABLE IF EXISTS active_record_views'
 
-    view_names = connection.select_values <<-SQL
+    view_names = connection.select_values(<<-SQL.squish)
       SELECT table_name
       FROM information_schema.views
       WHERE table_schema = 'public';
@@ -29,7 +29,7 @@ RSpec.configure do |config|
       connection.execute "DROP VIEW IF EXISTS #{connection.quote_table_name view_name} CASCADE"
     end
 
-    materialized_view_names = connection.select_values <<-SQL
+    materialized_view_names = connection.select_values(<<-SQL.squish)
       SELECT matviewname
       FROM pg_matviews
       WHERE schemaname = 'public'

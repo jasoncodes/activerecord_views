@@ -52,7 +52,7 @@ module ActiveRecordViews
       end
 
       def view_populated?
-        value = connection.select_value(<<-SQL)
+        value = connection.select_value(<<-SQL.squish)
           SELECT ispopulated
           FROM pg_matviews
           WHERE schemaname = 'public' AND matviewname = #{connection.quote self.table_name};

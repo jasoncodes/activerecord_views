@@ -45,7 +45,7 @@ module ActiveRecordViews
         end
         options_json = JSON.dump(options)
 
-        rows_updated = @connection.update(<<-SQL)
+        rows_updated = @connection.update(<<-SQL.squish)
           UPDATE active_record_views
           SET
             class_name = #{@connection.quote data[:class_name]},
@@ -57,7 +57,7 @@ module ActiveRecordViews
         SQL
 
         if rows_updated == 0
-          @connection.insert <<-SQL
+          @connection.insert <<-SQL.squish
             INSERT INTO active_record_views (
               name,
               class_name,

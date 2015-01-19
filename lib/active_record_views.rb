@@ -105,7 +105,7 @@ module ActiveRecordViews
     end
 
     if options[:unique_columns]
-      connection.execute <<-SQL
+      connection.execute <<-SQL.squish
         CREATE UNIQUE INDEX #{connection.quote_table_name "#{name}_pkey"}
         ON #{connection.quote_table_name name}(
           #{options[:unique_columns].map { |column_name| connection.quote_table_name(column_name) }.join(', ')}
@@ -123,7 +123,7 @@ module ActiveRecordViews
   end
 
   def self.view_exists?(connection, name)
-    connection.select_value(<<-SQL).present?
+    connection.select_value(<<-SQL.squish).present?
       SELECT 1
       FROM information_schema.views
       WHERE table_schema = 'public' AND table_name = #{connection.quote name}
@@ -135,7 +135,7 @@ module ActiveRecordViews
   end
 
   def self.materialized_view?(connection, name)
-    connection.select_value(<<-SQL).present?
+    connection.select_value(<<-SQL.squish).present?
       SELECT 1
       FROM pg_matviews
       WHERE schemaname = 'public' AND matviewname = #{connection.quote name};
@@ -147,7 +147,7 @@ module ActiveRecordViews
   end
 
   def self.get_view_dependencies(connection, name)
-    connection.select_rows <<-SQL
+    connection.select_rows <<-SQL.squish
       WITH RECURSIVE dependants AS (
         SELECT
           #{connection.quote name}::regclass::oid,
