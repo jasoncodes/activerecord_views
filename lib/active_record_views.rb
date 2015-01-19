@@ -96,7 +96,7 @@ module ActiveRecordViews
 
   def self.execute_create_view(connection, name, sql, options)
     options.assert_valid_keys :materialized, :unique_columns
-    sql = sql.sub(/;\s*/, '')
+    sql = sql.sub(/;\s*\z/, '')
 
     if options[:materialized]
       connection.execute "CREATE MATERIALIZED VIEW #{connection.quote_table_name name} AS #{sql} WITH NO DATA;"
