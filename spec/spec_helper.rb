@@ -16,6 +16,9 @@ RSpec.configure do |config|
   config.use_transactional_fixtures = false
 
   config.before do
+    ActionDispatch::Reloader.cleanup!
+    ActionDispatch::Reloader.prepare!
+
     connection = ActiveRecord::Base.connection
 
     connection.execute 'DROP TABLE IF EXISTS active_record_views'
