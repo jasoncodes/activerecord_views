@@ -88,14 +88,6 @@ describe ActiveRecordViews do
           end
         end
 
-        after do
-          dependants = %w[test dependant1 dependant2a dependant2b dependant3 dependant4]
-          expect(view_names).to match_array dependants
-          dependants.reverse.each do |name|
-            ActiveRecordViews.drop_view connection, name
-          end
-        end
-
         it 'updates view with compatible change' do
           create_test_view 'select 2 as id'
           expect(test_view_sql).to eq 'SELECT 2 AS id;'
@@ -115,6 +107,32 @@ describe ActiveRecordViews do
             }.to raise_error ActiveRecord::StatementInvalid, /column test.id does not exist/
             expect(test_view_sql).to eq 'SELECT 1 AS id;'
             expect(connection.select_value('SELECT id2 FROM dependant2a')).to eq '2'
+          end
+        end
+
+        describe '.drop_all_views' do
+          it 'can drop all managed views' do
+            connection.execute 'CREATE VIEW unmanaged AS SELECT 2 AS id;'
+
+            expect(view_names).to match_array %w[test dependant1 dependant2a dependant2b dependant3 dependant4 unmanaged]
+            ActiveRecordViews.drop_all_views connection
+            expect(view_names).to match_array %w[unmanaged]
+          end
+
+          it 'errors if an unmanaged view depends on a managed view' do
+            connection.execute 'CREATE VIEW unmanaged AS SELECT * from dependant2a'
+
+            expect {
+              ActiveRecordViews.drop_all_views connection
+            }.to raise_error ActiveRecord::StatementInvalid, /view unmanaged depends on view dependant2a/
+          end
+
+          it 'can drop materialized views' do
+            without_dependency_checks do
+              ActiveRecordViews.create_view connection, 'materialized', 'Materialized', 'SELECT id FROM test;', materialized: true
+            end
+            ActiveRecordViews.drop_all_views connection
+            expect(view_names).to match_array %w[]
           end
         end
       end

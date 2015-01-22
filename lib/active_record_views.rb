@@ -137,6 +137,21 @@ module ActiveRecordViews
     end
   end
 
+  def self.drop_all_views(connection)
+    names = Set.new connection.select_values('SELECT name FROM active_record_views;')
+
+    func = lambda do |name|
+      if view_exists?(connection, name)
+        get_view_dependants(connection, name).each do |dependant_name, _, _, _|
+          func.call(dependant_name)
+        end
+        drop_view connection, name
+      end
+    end
+
+    names.each { |name| func.call(name) }
+  end
+
   def self.execute_create_view(connection, name, sql, options)
     options.assert_valid_keys :dependencies, :materialized, :unique_columns
     sql = sql.sub(/;\s*\z/, '')

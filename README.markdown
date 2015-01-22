@@ -157,6 +157,12 @@ In order to keep things tidy and to avoid accidentally referencing a stale view,
 ActiveRecordViews.drop_view connection, 'account_balances'
 ```
 
+Alternatively, all view models can be dropped with the following:
+
+```ruby
+ActiveRecordViews.drop_all_views connection
+```
+
 ## Usage outside of Rails
 
 When included in a Ruby on Rails project, ActiveRecordViews will automatically detect `.sql` files alongside models in `app/models`.
