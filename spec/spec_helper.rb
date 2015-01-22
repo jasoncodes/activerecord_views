@@ -69,3 +69,19 @@ def update_file(file, new_content)
   File.write file, new_content
   File.utime time, time, file
 end
+
+def view_names
+  ActiveRecord::Base.connection.select_values(<<-SQL.squish)
+    SELECT table_name
+    FROM information_schema.views
+    WHERE table_schema = 'public'
+  SQL
+end
+
+def materialized_view_names
+  ActiveRecord::Base.connection.select_values(<<-SQL.squish)
+    SELECT matviewname
+    FROM pg_matviews
+    WHERE schemaname = 'public'
+  SQL
+end

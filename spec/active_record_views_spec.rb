@@ -20,27 +20,11 @@ describe ActiveRecordViews do
       SQL
     end
 
-    def view_names
-      connection.select_values(<<-SQL.squish)
-        SELECT table_name
-        FROM information_schema.views
-        WHERE table_schema = 'public'
-      SQL
-    end
-
     def test_materialized_view_sql
       connection.select_value(<<-SQL.squish).try(&:squish)
         SELECT definition
         FROM pg_matviews
         WHERE schemaname = 'public' AND matviewname = 'test'
-      SQL
-    end
-
-    def materialized_view_names
-      connection.select_values(<<-SQL.squish)
-        SELECT matviewname
-        FROM pg_matviews
-        WHERE schemaname = 'public'
       SQL
     end
 
