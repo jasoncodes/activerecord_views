@@ -54,7 +54,9 @@ module ActiveRecordViews
   end
 
   def self.create_view(base_connection, name, class_name, sql, options = {})
-    options.assert_valid_keys :materialized, :unique_columns
+    options = options.dup
+    options.assert_valid_keys :dependencies, :materialized, :unique_columns
+    options[:dependencies] = parse_dependencies(options[:dependencies])
 
     without_transaction base_connection do |connection|
       cache = ActiveRecordViews::ChecksumCache.new(connection)
@@ -66,7 +68,10 @@ module ActiveRecordViews
       else
         raise ArgumentError, 'unique_columns option requires view to be materialized' if options[:unique_columns]
         begin
-          connection.execute "CREATE OR REPLACE VIEW #{connection.quote_table_name name} AS #{sql}"
+          connection.transaction :requires_new => true do
+            connection.execute "CREATE OR REPLACE VIEW #{connection.quote_table_name name} AS #{sql}"
+            check_dependencies connection, name, class_name, options[:dependencies]
+          end
           false
         rescue ActiveRecord::StatementInvalid
           true
@@ -78,11 +83,49 @@ module ActiveRecordViews
           without_dependants connection, name do
             execute_drop_view connection, name
             execute_create_view connection, name, sql, options
+            check_dependencies connection, name, class_name, options[:dependencies]
           end
         end
       end
 
       cache.set name, data
+    end
+  end
+
+  def self.parse_dependencies(dependencies)
+    dependencies = Array(dependencies)
+    unless dependencies.all? { |dependency| dependency.is_a?(Class) && dependency < ActiveRecord::Base }
+      raise ArgumentError, 'dependencies must be ActiveRecord classes'
+    end
+    dependencies.map(&:name).sort
+  end
+
+  def self.check_dependencies(connection, name, class_name, declared_class_names)
+    actual_class_names = get_view_direct_dependencies(connection, name).sort
+
+    missing_class_names = actual_class_names - declared_class_names
+    extra_class_names = declared_class_names - actual_class_names
+
+    if missing_class_names.present?
+      example = "is_view dependencies: [#{actual_class_names.join(', ')}]"
+      raise ArgumentError, <<-TEXT.squish
+        #{missing_class_names.to_sentence}
+        must be specified as
+        #{missing_class_names.size > 1 ? 'dependencies' : 'a dependency'}
+        of #{class_name}:
+        `#{example}`
+      TEXT
+    end
+
+    if extra_class_names.present?
+      raise ArgumentError, <<-TEXT.squish
+        #{extra_class_names.to_sentence}
+        #{extra_class_names.size > 1 ? 'are' : 'is'}
+        not
+        #{extra_class_names.size > 1 ? 'dependencies' : 'a dependency'}
+        of
+        #{class_name}
+      TEXT
     end
   end
 
@@ -95,7 +138,7 @@ module ActiveRecordViews
   end
 
   def self.execute_create_view(connection, name, sql, options)
-    options.assert_valid_keys :materialized, :unique_columns
+    options.assert_valid_keys :dependencies, :materialized, :unique_columns
     sql = sql.sub(/;\s*\z/, '')
 
     if options[:materialized]
@@ -144,6 +187,25 @@ module ActiveRecordViews
 
   def self.supports_concurrent_refresh?(connection)
     connection.raw_connection.server_version >= 90400
+  end
+
+  def self.get_view_direct_dependencies(connection, name)
+    connection.select_values <<-SQL.squish
+      WITH dependencies AS (
+        SELECT DISTINCT refobjid::regclass::text AS name
+        FROM pg_depend d
+        INNER JOIN pg_rewrite r ON r.oid = d.objid
+        WHERE refclassid = 'pg_class'::regclass
+        AND classid = 'pg_rewrite'::regclass
+        AND deptype = 'n'
+        AND refobjid != r.ev_class
+        AND r.ev_class = #{connection.quote name}::regclass::oid
+      )
+
+      SELECT class_name
+      FROM dependencies
+      INNER JOIN active_record_views USING (name)
+    SQL
   end
 
   def self.get_view_dependants(connection, name)

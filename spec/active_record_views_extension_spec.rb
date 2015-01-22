@@ -91,24 +91,30 @@ describe ActiveRecordViews::Extension do
     end
 
     it 'successfully recreates modified paired views with incompatible changes' do
-      ActiveRecordViews.create_view ActiveRecord::Base.connection, 'modified_as', 'ModifiedA', 'SELECT 11 AS old_name;'
-      ActiveRecordViews.create_view ActiveRecord::Base.connection, 'modified_bs', 'ModifiedB', 'SELECT old_name FROM modified_as;'
+      without_dependency_checks do
+        ActiveRecordViews.create_view ActiveRecord::Base.connection, 'modified_as', 'ModifiedA', 'SELECT 11 AS old_name;'
+        ActiveRecordViews.create_view ActiveRecord::Base.connection, 'modified_bs', 'ModifiedB', 'SELECT old_name FROM modified_as;'
+      end
 
       expect(ModifiedB.first.attributes.except(nil)).to eq('new_name' => 22)
     end
 
     it 'successfully restores dependant view when temporarily dropping dependency' do
-      ActiveRecordViews.create_view ActiveRecord::Base.connection, 'dependency_as', 'DependencyA', 'SELECT 42 AS foo, 1 AS id;'
-      ActiveRecordViews.create_view ActiveRecord::Base.connection, 'dependency_bs', 'DependencyB', 'SELECT id FROM dependency_as;'
+      without_dependency_checks do
+        ActiveRecordViews.create_view ActiveRecord::Base.connection, 'dependency_as', 'DependencyA', 'SELECT 42 AS foo, 1 AS id;'
+        ActiveRecordViews.create_view ActiveRecord::Base.connection, 'dependency_bs', 'DependencyB', 'SELECT id FROM dependency_as;'
+      end
 
       expect(DependencyA.first.id).to eq 2
       expect(DependencyB.first.id).to eq 2
     end
 
     it 'sucessfully restore dependant view and dependency when loading from middle outwards' do
-      ActiveRecordViews.create_view ActiveRecord::Base.connection, 'dependency_as', 'DependencyA', 'SELECT 42 AS foo, 1 AS id;'
-      ActiveRecordViews.create_view ActiveRecord::Base.connection, 'dependency_bs', 'DependencyB', 'SELECT id FROM dependency_as;'
-      ActiveRecordViews.create_view ActiveRecord::Base.connection, 'dependency_cs', 'DependencyC', 'SELECT id FROM dependency_bs;'
+      without_dependency_checks do
+        ActiveRecordViews.create_view ActiveRecord::Base.connection, 'dependency_as', 'DependencyA', 'SELECT 42 AS foo, 1 AS id;'
+        ActiveRecordViews.create_view ActiveRecord::Base.connection, 'dependency_bs', 'DependencyB', 'SELECT id FROM dependency_as;'
+        ActiveRecordViews.create_view ActiveRecord::Base.connection, 'dependency_cs', 'DependencyC', 'SELECT id FROM dependency_bs;'
+      end
 
       expect(DependencyB.first.id).to eq 2
     end
@@ -203,6 +209,75 @@ describe ActiveRecordViews::Extension do
       expect {
         MaterializedViewAutoRefreshTestModel.refresh_view! concurrent: :blah
       }.to raise_error ArgumentError, 'invalid concurrent option'
+    end
+
+    it 'errors if dependencies are not specified' do
+      class DependencyCheckBase1 < ActiveRecord::Base
+        self.table_name = 'dependency_check_base1'
+        is_view 'SELECT 1 AS ID;'
+      end
+      class DependencyCheckBase2 < ActiveRecord::Base
+        self.table_name = 'dependency_check_base2'
+        is_view 'SELECT 1 AS ID;'
+      end
+      ActiveRecord::Base.connection.execute 'CREATE VIEW dependency_check_base_unmanaged AS SELECT 1 AS ID;'
+
+      expect {
+        class DependencyCheckGood < ActiveRecord::Base
+          is_view 'SELECT * FROM dependency_check_base1;', dependencies: [DependencyCheckBase1]
+        end
+      }.to_not raise_error
+
+      expect {
+        class DependencyCheckGoodUnmanaged < ActiveRecord::Base
+          is_view 'SELECT * FROM dependency_check_base_unmanaged;'
+        end
+      }.to_not raise_error
+
+      expect {
+        class DependencyCheckMissing1 < ActiveRecord::Base
+          is_view 'SELECT * FROM dependency_check_base1 UNION ALL SELECT * FROM dependency_check_base2;', dependencies: [DependencyCheckBase1]
+        end
+      }.to raise_error ArgumentError, 'DependencyCheckBase2 must be specified as a dependency of DependencyCheckMissing1: `is_view dependencies: [DependencyCheckBase1, DependencyCheckBase2]`'
+
+      expect {
+        class DependencyCheckMissing2 < ActiveRecord::Base
+          is_view 'SELECT * FROM dependency_check_base1 UNION ALL SELECT * FROM dependency_check_base2;', dependencies: []
+        end
+      }.to raise_error ArgumentError, 'DependencyCheckBase1 and DependencyCheckBase2 must be specified as dependencies of DependencyCheckMissing2: `is_view dependencies: [DependencyCheckBase1, DependencyCheckBase2]`'
+
+      expect {
+        class DependencyCheckNested < ActiveRecord::Base
+          is_view 'SELECT 1 FROM dependency_check_goods'
+        end
+      }.to raise_error ArgumentError, 'DependencyCheckGood must be specified as a dependency of DependencyCheckNested: `is_view dependencies: [DependencyCheckGood]`'
+
+      expect {
+        class DependencyCheckExtra1 < ActiveRecord::Base
+          is_view 'SELECT * FROM dependency_check_base1;', dependencies: [DependencyCheckBase1, DependencyCheckBase2]
+        end
+      }.to raise_error ArgumentError, 'DependencyCheckBase2 is not a dependency of DependencyCheckExtra1'
+
+      expect {
+        class DependencyCheckExtra2 < ActiveRecord::Base
+          is_view 'SELECT 1 AS id;', dependencies: [DependencyCheckBase1, DependencyCheckBase2]
+        end
+      }.to raise_error ArgumentError, 'DependencyCheckBase1 and DependencyCheckBase2 are not dependencies of DependencyCheckExtra2'
+
+      expect {
+        class DependencyCheckWrongType < ActiveRecord::Base
+          is_view 'SELECT 1;', dependencies: %w[DependencyCheckBase1]
+        end
+      }.to raise_error ArgumentError, 'dependencies must be ActiveRecord classes'
+
+      expect(view_names).to match_array %w[
+        dependency_check_base1
+        dependency_check_base2
+        dependency_check_base_unmanaged
+
+        dependency_check_goods
+        dependency_check_good_unmanageds
+      ]
     end
   end
 end

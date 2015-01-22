@@ -41,7 +41,7 @@ describe ActiveRecordViews do
           'name' => 'test',
           'class_name' => 'Test',
           'checksum' => Digest::SHA1.hexdigest('select 1 as id'),
-          'options' => '{"materialized":true}',
+          'options' => '{"materialized":true,"dependencies":[]}',
         }
       ]
     end
@@ -79,11 +79,13 @@ describe ActiveRecordViews do
 
       context 'having dependant views' do
         before do
-          ActiveRecordViews.create_view connection, 'dependant1', 'Dependant1', 'SELECT id FROM test;'
-          ActiveRecordViews.create_view connection, 'dependant2a', 'Dependant2a', 'SELECT id, id * 2 AS id2 FROM dependant1;'
-          ActiveRecordViews.create_view connection, 'dependant2b', 'Dependant2b', 'SELECT id, id * 4 AS id4 FROM dependant1;'
-          ActiveRecordViews.create_view connection, 'dependant3', 'Dependant3', 'SELECT * FROM dependant2b;'
-          ActiveRecordViews.create_view connection, 'dependant4', 'Dependant4', 'SELECT id FROM dependant1 UNION ALL SELECT id FROM dependant3;'
+          without_dependency_checks do
+            ActiveRecordViews.create_view connection, 'dependant1', 'Dependant1', 'SELECT id FROM test;'
+            ActiveRecordViews.create_view connection, 'dependant2a', 'Dependant2a', 'SELECT id, id * 2 AS id2 FROM dependant1;'
+            ActiveRecordViews.create_view connection, 'dependant2b', 'Dependant2b', 'SELECT id, id * 4 AS id4 FROM dependant1;'
+            ActiveRecordViews.create_view connection, 'dependant3', 'Dependant3', 'SELECT * FROM dependant2b;'
+            ActiveRecordViews.create_view connection, 'dependant4', 'Dependant4', 'SELECT id FROM dependant1 UNION ALL SELECT id FROM dependant3;'
+          end
         end
 
         after do
@@ -171,9 +173,11 @@ describe ActiveRecordViews do
     end
 
     it 'preserves materialized view if dropping/recreating' do
-      ActiveRecordViews.create_view connection, 'test1', 'Test1', 'SELECT 1 AS foo'
-      ActiveRecordViews.create_view connection, 'test2', 'Test2', 'SELECT * FROM test1', materialized: true
-      ActiveRecordViews.create_view connection, 'test1', 'Test1', 'SELECT 2 AS bar, 1 AS foo'
+      without_dependency_checks do
+        ActiveRecordViews.create_view connection, 'test1', 'Test1', 'SELECT 1 AS foo'
+        ActiveRecordViews.create_view connection, 'test2', 'Test2', 'SELECT * FROM test1', materialized: true
+        ActiveRecordViews.create_view connection, 'test1', 'Test1', 'SELECT 2 AS bar, 1 AS foo'
+      end
 
       expect(materialized_view_names).to eq %w[test2]
       expect(view_names).to eq %w[test1]

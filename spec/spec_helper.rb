@@ -85,3 +85,10 @@ def materialized_view_names
     WHERE schemaname = 'public'
   SQL
 end
+
+def without_dependency_checks
+  allow(ActiveRecordViews).to receive(:check_dependencies)
+  yield
+ensure
+  allow(ActiveRecordViews).to receive(:check_dependencies).and_call_original
+end

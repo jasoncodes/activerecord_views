@@ -1,3 +1,3 @@
 class ModifiedB < ActiveRecord::Base
-  is_view "SELECT new_name FROM #{ModifiedA.table_name};"
+  is_view "SELECT new_name FROM #{ModifiedA.table_name};", dependencies: [ModifiedA]
 end

@@ -68,6 +68,35 @@ Account.includes(:account_balance).find_each do |account|
 end
 ```
 
+## Dependencies
+
+You can use an view model from another view model or within SQL blocks in your application code.
+In order to ensure the model file is loaded (and thus the view is created), you should reference
+the model class when you use the view rather than using the database table name directly:
+
+```ruby
+connection.select_values <<-SQL
+  SELECT …
+  FROM …
+  INNER JOIN #{AccountBalance.table_name} … # use instead of account_balances
+  …
+SQL
+```
+
+Due to the importance of ensuring view models load in the correct order, ActiveRecordViews has
+a safety check which will require you to specify the dependency explicitly if your view refers
+to another view model:
+
+```ruby
+class AccountBalance < ActiveRecord::Base
+  is_view
+end
+
+class AccountSummary < ActiveRecord::Base
+  is_view dependencies: [AccountBalance]
+end
+```
+
 ## Materialized views
 
 ActiveRecordViews has support [PostgreSQL's materialized views](http://www.postgresql.org/docs/9.4/static/rules-materializedviews.html).
