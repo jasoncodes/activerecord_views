@@ -99,7 +99,7 @@ end
 
 ## Materialized views
 
-ActiveRecordViews has support [PostgreSQL's materialized views](http://www.postgresql.org/docs/9.4/static/rules-materializedviews.html).
+ActiveRecordViews has support for [PostgreSQL's materialized views](http://www.postgresql.org/docs/9.4/static/rules-materializedviews.html).
 By default, views execute their query to calculate the output every time they are accessed.
 Materialized views let you cache the output of views. This is useful for views which have expensive calculations. Your application can then trigger a refresh of the cached data as required.
 
