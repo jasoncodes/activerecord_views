@@ -241,5 +241,37 @@ describe ActiveRecordViews do
         end
       end
     end
+
+    it 'yields same isolated connection if called recursively on original connection inside transaction' do
+      original_connection.transaction do
+        ActiveRecordViews.without_transaction original_connection do |new_connection_1|
+          expect(new_connection_1).to_not eq original_connection
+          ActiveRecordViews.without_transaction original_connection do |new_connection_2|
+            expect(new_connection_2).to eq new_connection_1
+          end
+        end
+      end
+    end
+
+    it 'yields different isolated connection if called recursively on different connections inside transcation' do
+      begin
+        original_connection_2 = original_connection.pool.checkout
+
+        original_connection.transaction do
+          ActiveRecordViews.without_transaction original_connection do |new_connection_1|
+            expect(new_connection_1).to_not eq original_connection
+            original_connection_2.transaction do
+              ActiveRecordViews.without_transaction original_connection_2 do |new_connection_2|
+                expect(new_connection_2).to_not eq original_connection
+                expect(new_connection_2).to_not eq original_connection_2
+                expect(new_connection_2).to_not eq new_connection_1
+              end
+            end
+          end
+        end
+      ensure
+        original_connection.pool.checkin original_connection_2
+      end
+    end
   end
 end
