@@ -15,6 +15,7 @@ module ActiveRecordViews
   def self.init!
     require 'active_record_views/extension'
     ::ActiveRecord::Base.send :include, ActiveRecordViews::Extension
+    require 'active_record_views/database_cleaner/truncation_extension' if defined? ::DatabaseCleaner
   end
 
   def self.find_sql_file(name)
