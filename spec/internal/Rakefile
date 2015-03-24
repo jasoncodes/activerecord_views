@@ -1,0 +1,16 @@
+require 'bundler/setup'
+require 'combustion'
+
+Combustion::Database.instance_eval do
+  def setup
+    ActiveRecord::Base.configurations = YAML.load(ERB.new(File.read("#{Rails.root}/config/database.yml")).result)
+  end
+end
+
+Combustion.initialize! :active_record, :action_controller do
+  config.cache_classes = false
+  config.active_record.whitelist_attributes = true if Rails::VERSION::MAJOR < 4
+end
+
+load 'active_record/railties/databases.rake'
+Combustion::Application.load_tasks
