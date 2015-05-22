@@ -71,10 +71,10 @@ describe ActiveRecordViews::ChecksumCache do
       end
 
       it 'upgrades the table without losing data' do
-        expect(ActiveRecord::Base.connection).to receive(:execute).with("ALTER TABLE active_record_views ADD COLUMN options json NOT NULL DEFAULT '{}';").once.and_call_original
-
         expect(connection.column_exists?('active_record_views', 'options')).to eq false
         expect(ActiveRecordViews.view_exists?(connection, 'test_view')).to eq true
+
+        expect(ActiveRecord::Base.connection).to receive(:execute).with("ALTER TABLE active_record_views ADD COLUMN options json NOT NULL DEFAULT '{}';").once.and_call_original
 
         ActiveRecordViews::ChecksumCache.new(connection)
 
