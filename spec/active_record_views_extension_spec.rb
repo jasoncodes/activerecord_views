@@ -182,8 +182,12 @@ describe ActiveRecordViews::Extension do
       end
       MaterializedViewConcurrentRefreshTestModel.refresh_view!
 
-      expect(ActiveRecord::Base.connection).to receive(:execute).with('REFRESH MATERIALIZED VIEW "materialized_view_refresh_test_models";').once.and_call_original
-      expect(ActiveRecord::Base.connection).to receive(:execute).with('REFRESH MATERIALIZED VIEW CONCURRENTLY "materialized_view_concurrent_refresh_test_models";').once.and_call_original
+      [
+        'REFRESH MATERIALIZED VIEW "materialized_view_refresh_test_models";',
+        'REFRESH MATERIALIZED VIEW CONCURRENTLY "materialized_view_concurrent_refresh_test_models";',
+      ].each do |sql|
+        expect(ActiveRecord::Base.connection).to receive(:execute).with(sql).once.and_call_original
+      end
 
       MaterializedViewRefreshTestModel.refresh_view!
       MaterializedViewConcurrentRefreshTestModel.refresh_view! concurrent: true
@@ -194,8 +198,12 @@ describe ActiveRecordViews::Extension do
         is_view 'SELECT 1 AS id;', materialized: true, unique_columns: [:id]
       end
 
-      expect(ActiveRecord::Base.connection).to receive(:execute).with('REFRESH MATERIALIZED VIEW "materialized_view_auto_refresh_test_models";').once.and_call_original
-      expect(ActiveRecord::Base.connection).to receive(:execute).with('REFRESH MATERIALIZED VIEW CONCURRENTLY "materialized_view_auto_refresh_test_models";').once.and_call_original
+      [
+        'REFRESH MATERIALIZED VIEW "materialized_view_auto_refresh_test_models";',
+        'REFRESH MATERIALIZED VIEW CONCURRENTLY "materialized_view_auto_refresh_test_models";',
+      ].each do |sql|
+        expect(ActiveRecord::Base.connection).to receive(:execute).with(sql).once.and_call_original
+      end
 
       MaterializedViewAutoRefreshTestModel.refresh_view! concurrent: :auto
       MaterializedViewAutoRefreshTestModel.refresh_view! concurrent: :auto
