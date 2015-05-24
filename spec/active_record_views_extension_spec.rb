@@ -149,8 +149,14 @@ describe ActiveRecordViews::Extension do
         }.to raise_error ActiveRecord::StatementInvalid, /materialized view "materialized_view_test_models" has not been populated/
 
         expect(MaterializedViewTestModel.view_populated?).to eq false
+        expect(MaterializedViewTestModel.refreshed_at).to eq nil
+
         MaterializedViewTestModel.refresh_view!
+
         expect(MaterializedViewTestModel.view_populated?).to eq true
+        expect(MaterializedViewTestModel.refreshed_at).to be_a ActiveSupport::TimeWithZone
+        expect(MaterializedViewTestModel.refreshed_at.zone).to eq 'UTC'
+        expect(MaterializedViewTestModel.refreshed_at).to be_within(1.second).of Time.now
 
         expect(MaterializedViewTestModel.first!.id).to eq 123
 
@@ -183,8 +189,14 @@ describe ActiveRecordViews::Extension do
       MaterializedViewConcurrentRefreshTestModel.refresh_view!
 
       [
+        'BEGIN',
         'REFRESH MATERIALIZED VIEW "materialized_view_refresh_test_models";',
+        "UPDATE active_record_views SET refreshed_at = current_timestamp AT TIME ZONE 'UTC' WHERE name = 'materialized_view_refresh_test_models';",
+        'COMMIT',
+        'BEGIN',
         'REFRESH MATERIALIZED VIEW CONCURRENTLY "materialized_view_concurrent_refresh_test_models";',
+        "UPDATE active_record_views SET refreshed_at = current_timestamp AT TIME ZONE 'UTC' WHERE name = 'materialized_view_concurrent_refresh_test_models';",
+        'COMMIT',
       ].each do |sql|
         expect(ActiveRecord::Base.connection).to receive(:execute).with(sql).once.and_call_original
       end
@@ -199,8 +211,14 @@ describe ActiveRecordViews::Extension do
       end
 
       [
+        'BEGIN',
         'REFRESH MATERIALIZED VIEW "materialized_view_auto_refresh_test_models";',
+        "UPDATE active_record_views SET refreshed_at = current_timestamp AT TIME ZONE 'UTC' WHERE name = 'materialized_view_auto_refresh_test_models';",
+        'COMMIT',
+        'BEGIN',
         'REFRESH MATERIALIZED VIEW CONCURRENTLY "materialized_view_auto_refresh_test_models";',
+        "UPDATE active_record_views SET refreshed_at = current_timestamp AT TIME ZONE 'UTC' WHERE name = 'materialized_view_auto_refresh_test_models';",
+        'COMMIT',
       ].each do |sql|
         expect(ActiveRecord::Base.connection).to receive(:execute).with(sql).once.and_call_original
       end

@@ -62,7 +62,7 @@ describe ActiveRecordViews::ChecksumCache do
       end
     end
 
-    context 'existing table without options' do
+    context 'existing table without options or refreshed at timestamp' do
       before do
         connection.execute 'CREATE TABLE active_record_views(name text PRIMARY KEY, class_name text NOT NULL UNIQUE, checksum text NOT NULL);'
 
@@ -72,13 +72,16 @@ describe ActiveRecordViews::ChecksumCache do
 
       it 'upgrades the table without losing data' do
         expect(connection.column_exists?('active_record_views', 'options')).to eq false
+        expect(connection.column_exists?('active_record_views', 'refreshed_at')).to eq false
         expect(ActiveRecordViews.view_exists?(connection, 'test_view')).to eq true
 
         expect(ActiveRecord::Base.connection).to receive(:execute).with("ALTER TABLE active_record_views ADD COLUMN options json NOT NULL DEFAULT '{}';").once.and_call_original
+        expect(ActiveRecord::Base.connection).to receive(:execute).with("ALTER TABLE active_record_views ADD COLUMN refreshed_at timestamp;").once.and_call_original
 
         ActiveRecordViews::ChecksumCache.new(connection)
 
         expect(connection.column_exists?('active_record_views', 'options')).to eq true
+        expect(connection.column_exists?('active_record_views', 'refreshed_at')).to eq true
         expect(ActiveRecordViews.view_exists?(connection, 'test_view')).to eq true
       end
     end

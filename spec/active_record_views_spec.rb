@@ -42,6 +42,7 @@ describe ActiveRecordViews do
           'class_name' => 'Test',
           'checksum' => Digest::SHA1.hexdigest('select 1 as id'),
           'options' => '{"materialized":true,"dependencies":[]}',
+          'refreshed_at' => nil,
         }
       ]
     end

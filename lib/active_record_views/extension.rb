@@ -48,7 +48,10 @@ module ActiveRecordViews
           raise ArgumentError, 'invalid concurrent option'
         end
 
-        connection.execute "REFRESH MATERIALIZED VIEW#{' CONCURRENTLY' if concurrent} #{connection.quote_table_name self.table_name};"
+        connection.transaction do
+          connection.execute "REFRESH MATERIALIZED VIEW#{' CONCURRENTLY' if concurrent} #{connection.quote_table_name self.table_name};"
+          connection.execute "UPDATE active_record_views SET refreshed_at = current_timestamp AT TIME ZONE 'UTC' WHERE name = #{connection.quote self.table_name};"
+        end
       end
 
       def view_populated?
@@ -63,6 +66,18 @@ module ActiveRecordViews
         end
 
         ActiveRecord::ConnectionAdapters::Column::TRUE_VALUES.include?(value)
+      end
+
+      def refreshed_at
+        value = connection.select_value(<<-SQL.squish)
+          SELECT refreshed_at
+          FROM active_record_views
+          WHERE name = #{connection.quote self.table_name};
+        SQL
+
+        if value
+          ActiveSupport::TimeZone['UTC'].parse(value)
+        end
       end
     end
   end

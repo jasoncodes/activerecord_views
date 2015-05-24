@@ -22,8 +22,12 @@ module ActiveRecordViews
         @connection.execute "ALTER TABLE active_record_views ADD COLUMN options json NOT NULL DEFAULT '{}';"
       end
 
+      if table_exists && !@connection.column_exists?('active_record_views', 'refreshed_at')
+        @connection.execute "ALTER TABLE active_record_views ADD COLUMN refreshed_at timestamp;"
+      end
+
       unless table_exists
-        @connection.execute "CREATE TABLE active_record_views(name text PRIMARY KEY, class_name text NOT NULL UNIQUE, checksum text NOT NULL, options json NOT NULL DEFAULT '{}');"
+        @connection.execute "CREATE TABLE active_record_views(name text PRIMARY KEY, class_name text NOT NULL UNIQUE, checksum text NOT NULL, options json NOT NULL DEFAULT '{}', refreshed_at timestamp);"
       end
     end
 
