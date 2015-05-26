@@ -79,6 +79,17 @@ module ActiveRecordViews
           ActiveSupport::TimeZone['UTC'].parse(value)
         end
       end
+
+      def ensure_populated!
+        ActiveRecordViews.get_view_direct_dependencies(self.connection, self.table_name).each do |class_name|
+          klass = class_name.constantize
+          klass.ensure_populated!
+        end
+
+        if ActiveRecordViews.materialized_view?(self.connection, self.table_name)
+          refresh_view! unless view_populated?
+        end
+      end
     end
   end
 end

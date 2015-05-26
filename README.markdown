@@ -123,6 +123,8 @@ AccountBalance.view_populated? # => true
 
 ActiveRecordViews records when a view was last refreshed. This is often useful for giving users an idea of how stale data. To retrieve this timestamp, call `.refreshed_at` on the model:
 
+ActiveRecordViews also has a convenience method called `ensure_populated!` which checks all materialized views in a chain of dependencies have been initially populated. This can be used as a safeguard to lazily populate views on demand. You will probably also setup a schedule to periodically refresh the view data when it gets stale.
+
 PostgreSQL 9.4 supports refreshing materialized views concurrently. This allows other processes to continue reading old cached data while the view is being updated. To use this feature you must have define a unique index on the materialized view:
 
 ```sql

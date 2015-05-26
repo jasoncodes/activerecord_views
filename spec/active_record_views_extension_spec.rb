@@ -179,6 +179,29 @@ describe ActiveRecordViews::Extension do
       }.to raise_error ArgumentError, 'not a materialized view'
     end
 
+    it 'supports ensuring a view hierarchy has been populated' do
+      class EnsurePopulatedFoo < ActiveRecord::Base
+        is_view 'SELECT 1 AS id;', materialized: true
+      end
+
+      class EnsurePopulatedBar < ActiveRecord::Base
+        is_view "SELECT * FROM #{EnsurePopulatedFoo.table_name}", dependencies: [EnsurePopulatedFoo]
+      end
+
+      class EnsurePopulatedBaz < ActiveRecord::Base
+        is_view "SELECT * FROM #{EnsurePopulatedBar.table_name}", dependencies: [EnsurePopulatedBar]
+      end
+
+      expect(ActiveRecord::Base.connection).to receive(:execute).with(/^REFRESH MATERIALIZED VIEW/).once.and_call_original
+      allow(ActiveRecord::Base.connection).to receive(:execute).and_call_original
+
+      expect(EnsurePopulatedFoo.view_populated?).to eq false
+      EnsurePopulatedBaz.ensure_populated!
+      expect(EnsurePopulatedFoo.view_populated?).to eq true
+      EnsurePopulatedBaz.ensure_populated!
+      expect(EnsurePopulatedFoo.view_populated?).to eq true
+    end
+
     it 'supports refreshing materialized views concurrently' do
       class MaterializedViewRefreshTestModel < ActiveRecord::Base
         is_view 'SELECT 1 AS id;', materialized: true
