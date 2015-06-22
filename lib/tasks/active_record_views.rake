@@ -15,5 +15,9 @@ Rake::Task['db:structure:dump'].enhance do
 
     system("pg_dump --data-only --table=active_record_views #{Shellwords.escape config['database']} >> #{Shellwords.escape filename}")
     raise 'active_record_views metadata dump failed' unless $?.success?
+
+    File.open filename, 'a' do |io|
+      io.puts 'UPDATE active_record_views SET refreshed_at = NULL WHERE refreshed_at IS NOT NULL;'
+    end
   end
 end
