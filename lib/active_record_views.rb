@@ -20,7 +20,7 @@ module ActiveRecordViews
 
   def self.find_sql_file(name)
     self.sql_load_path.each do |dir|
-      path = "#{dir}/#{name}.sql"
+      path = "#{dir}/views/#{name}.sql"
       return path if File.exist?(path)
       path = path + '.erb'
       return path if File.exist?(path)
