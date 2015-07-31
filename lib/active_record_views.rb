@@ -160,13 +160,24 @@ module ActiveRecordViews
   end
 
   def self.execute_create_view(connection, name, sql, options)
-    options.assert_valid_keys :dependencies, :materialized, :unique_columns
+    options.assert_valid_keys :dependencies, :materialized, :unique_columns, :indexes
     sql = sql.sub(/;\s*\z/, '')
 
     if options[:materialized]
       connection.execute "CREATE MATERIALIZED VIEW #{connection.quote_table_name name} AS #{sql} WITH NO DATA;"
     else
       connection.execute "CREATE VIEW #{connection.quote_table_name name} AS #{sql};"
+    end
+
+    if options[:indexes]
+      options[:indexes].map { |column_name|
+        connection.execute <<-SQL.squish
+          CREATE INDEX #{connection.quote_table_name "#{name}_#{column_name}_index"}
+          ON #{connection.quote_table_name name} (
+            #{column_name}
+          )
+        SQL
+      }
     end
 
     if options[:unique_columns]
