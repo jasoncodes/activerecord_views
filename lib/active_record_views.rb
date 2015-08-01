@@ -62,7 +62,7 @@ module ActiveRecordViews
 
   def self.create_view(base_connection, name, class_name, sql, options = {})
     options = options.dup
-    options.assert_valid_keys :dependencies, :materialized, :unique_columns
+    options.assert_valid_keys :dependencies, :materialized, :unique_columns, :indexes
     options[:dependencies] = parse_dependencies(options[:dependencies])
 
     without_transaction base_connection do |connection|
