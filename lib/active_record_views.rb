@@ -174,7 +174,7 @@ module ActiveRecordViews
         connection.execute <<-SQL.squish
           CREATE INDEX #{connection.quote_table_name "#{name}_#{column_name}_index"}
           ON #{connection.quote_table_name name} (
-            #{column_name}
+            #{connection.quote_table_name(column_name)}
           )
         SQL
       }
