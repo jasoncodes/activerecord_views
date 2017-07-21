@@ -6,7 +6,7 @@ module ActiveRecordViews
 
     def self.currently_migrating?
       if defined?(Rake) && Rake.respond_to?(:application)
-        Rake.application.top_level_tasks.include?('db:migrate')
+        Rake.application.top_level_tasks.any? { |task_name| task_name =~ /^db:migrate($|:)/ }
       end
     end
 
