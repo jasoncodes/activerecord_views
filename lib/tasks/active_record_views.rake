@@ -13,6 +13,7 @@ Rake::Task['db:structure:dump'].enhance do
       set_psql_env(config)
     end
 
+    require 'shellwords'
     system("pg_dump --data-only --table=active_record_views #{Shellwords.escape config['database']} >> #{Shellwords.escape filename}")
     raise 'active_record_views metadata dump failed' unless $?.success?
 
