@@ -28,6 +28,14 @@ module ActiveRecordViews
     raise "could not find #{name}.sql"
   end
 
+  def self.read_sql_file(sql_path)
+    if sql_path.end_with?('.erb')
+      ERB.new(File.read(sql_path)).result
+    else
+      File.read(sql_path)
+    end
+  end
+
   def self.without_transaction(connection)
     in_transaction = if connection.respond_to? :transaction_open?
       connection.transaction_open?
