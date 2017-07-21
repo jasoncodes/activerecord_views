@@ -59,6 +59,31 @@ describe ActiveRecordViews::Extension do
       test_request # trigger cleanup
     end
 
+    it 'reloads the database view when external ERB SQL file is modified' do
+      ['foo 42', 'bar 42'].each do |sql|
+        expect(ActiveRecordViews).to receive(:create_view).with(
+          anything,
+          'modified_erb_file_test_models',
+          'ModifiedErbFileTestModel',
+          sql,
+          {}
+        ).once.ordered
+      end
+
+      with_temp_sql_dir do |temp_dir|
+        sql_file = File.join(temp_dir, 'modified_erb_file_test_model.sql.erb')
+        update_file sql_file, 'foo <%= 2*3*7 %>'
+
+        class ModifiedErbFileTestModel < ActiveRecord::Base
+          is_view
+        end
+
+        update_file sql_file, 'bar <%= 2*3*7 %>'
+        test_request
+      end
+      test_request # trigger cleanup
+    end
+
     it 'drops the view if the external SQL file is deleted' do
       with_temp_sql_dir do |temp_dir|
         sql_file = File.join(temp_dir, 'deleted_file_test_model.sql')
