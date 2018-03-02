@@ -18,7 +18,7 @@ Rake::Task['db:structure:dump'].enhance do
     raise 'active_record_views metadata dump failed' unless $?.success?
 
     File.open filename, 'a' do |io|
-      io.puts 'UPDATE active_record_views SET refreshed_at = NULL WHERE refreshed_at IS NOT NULL;'
+      io.puts 'UPDATE public.active_record_views SET refreshed_at = NULL WHERE refreshed_at IS NOT NULL;'
     end
   end
 end

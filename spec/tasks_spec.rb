@@ -11,7 +11,7 @@ describe 'rake db:structure:dump' do
     sql = File.read('spec/internal/db/structure.sql')
     FileUtils.rm_f 'spec/internal/db/structure.sql'
 
-    expect(sql).to match(/COPY active_record_views.+test_view\tTestView/m)
-    expect(sql).to match(/UPDATE active_record_views SET refreshed_at = NULL/)
+    expect(sql).to match(/COPY public\.active_record_views.+test_view\tTestView/m)
+    expect(sql).to match(/UPDATE public\.active_record_views SET refreshed_at = NULL/)
   end
 end
