@@ -4,13 +4,21 @@ describe ActiveRecordViews::ChecksumCache do
   let(:connection) { ActiveRecord::Base.connection }
 
   describe 'initialisation' do
+    def metadata_table_exists?
+      if Rails::VERSION::MAJOR >= 5
+        connection.data_source_exists?('active_record_views')
+      else
+        connection.table_exists?('active_record_views')
+      end
+    end
+
     context 'no existing table' do
       it 'creates the table' do
         expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ACREATE TABLE active_record_views/).once.and_call_original
 
-        expect(connection.table_exists?('active_record_views')).to eq false
+        expect(metadata_table_exists?).to eq false
         ActiveRecordViews::ChecksumCache.new(connection)
-        expect(connection.table_exists?('active_record_views')).to eq true
+        expect(metadata_table_exists?).to eq true
 
         expect(connection.column_exists?('active_record_views', 'class_name')).to eq true
         expect(connection.column_exists?('active_record_views', 'options')).to eq true
@@ -20,7 +28,7 @@ describe ActiveRecordViews::ChecksumCache do
     context 'existing table with current structure' do
       before do
         ActiveRecordViews::ChecksumCache.new(connection)
-        expect(connection.table_exists?('active_record_views')).to eq true
+        expect(metadata_table_exists?).to eq true
       end
 
       it 'does not recreate the table' do
@@ -42,9 +50,6 @@ describe ActiveRecordViews::ChecksumCache do
 
       it 'drops existing managed views recreates the table' do
         expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ABEGIN\z/).once.and_call_original
-        if Rails::VERSION::MAJOR < 4
-          expect(ActiveRecord::Base.connection).to receive(:execute).with('SELECT name FROM active_record_views;', nil).once.and_call_original
-        end
         expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ADROP VIEW IF EXISTS test_view CASCADE;\z/).once.and_call_original
         expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ADROP TABLE active_record_views;\z/).once.and_call_original
         expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ACREATE TABLE active_record_views/).once.and_call_original

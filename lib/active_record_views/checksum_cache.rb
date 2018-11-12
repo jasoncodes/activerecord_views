@@ -6,7 +6,11 @@ module ActiveRecordViews
     end
 
     def init_state_table!
-      table_exists = @connection.table_exists?('active_record_views')
+      table_exists = if Rails::VERSION::MAJOR >= 5
+        @connection.data_source_exists?('active_record_views')
+      else
+        @connection.table_exists?('active_record_views')
+      end
 
       if table_exists && !@connection.column_exists?('active_record_views', 'class_name')
         @connection.transaction :requires_new => true do

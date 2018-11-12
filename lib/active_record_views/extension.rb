@@ -60,7 +60,11 @@ module ActiveRecordViews
           raise ArgumentError, 'not a materialized view'
         end
 
-        ActiveRecord::ConnectionAdapters::Column::TRUE_VALUES.include?(value)
+        if Rails::VERSION::MAJOR < 5
+          value = ActiveRecord::ConnectionAdapters::Column::TRUE_VALUES.include?(value)
+        end
+
+        value
       end
 
       def refreshed_at

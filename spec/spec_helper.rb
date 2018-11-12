@@ -2,13 +2,12 @@ require 'bundler'
 Bundler.setup
 
 require 'rails/version'
-$VERBOSE = true unless Rails::VERSION::MAJOR < 4
+$VERBOSE = true
 
 require 'combustion'
 require 'active_record_views'
 Combustion.initialize! :active_record, :action_controller do
   config.cache_classes = false
-  config.active_record.whitelist_attributes = true if Rails::VERSION::MAJOR < 4
 end
 require 'rspec/rails'
 
@@ -16,8 +15,12 @@ RSpec.configure do |config|
   config.use_transactional_fixtures = false
 
   config.before do
-    ActionDispatch::Reloader.cleanup!
-    ActionDispatch::Reloader.prepare!
+    if Rails::VERSION::MAJOR >= 5
+      Rails.application.reloader.reload!
+    else
+      ActionDispatch::Reloader.cleanup!
+      ActionDispatch::Reloader.prepare!
+    end
 
     connection = ActiveRecord::Base.connection
 

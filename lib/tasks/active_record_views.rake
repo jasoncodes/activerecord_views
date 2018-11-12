@@ -1,5 +1,11 @@
 Rake::Task['db:structure:dump'].enhance do
-  if ActiveRecord::Base.connection.table_exists?('active_record_views')
+  table_exists = if Rails::VERSION::MAJOR >= 5
+    ActiveRecord::Base.connection.data_source_exists?('active_record_views')
+  else
+    ActiveRecord::Base.connection.table_exists?('active_record_views')
+  end
+
+  if table_exists
     filename = ENV['DB_STRUCTURE'] || File.join(Rails.root, "db", "structure.sql")
 
     if defined? ActiveRecord::Tasks::DatabaseTasks

@@ -92,14 +92,14 @@ describe ActiveRecordViews do
         it 'updates view with compatible change' do
           create_test_view 'select 2 as id'
           expect(test_view_sql).to eq 'SELECT 2 AS id;'
-          expect(connection.select_value('SELECT id2 FROM dependant2a')).to eq '4'
+          expect(Integer(connection.select_value('SELECT id2 FROM dependant2a'))).to eq 4
         end
 
         describe 'changes incompatible with CREATE OR REPLACE' do
           it 'updates view with new column added before existing' do
             create_test_view "select 'foo'::text as name, 3 as id"
             expect(test_view_sql).to eq "SELECT 'foo'::text AS name, 3 AS id;"
-            expect(connection.select_value('SELECT id2 FROM dependant2a')).to eq '6'
+            expect(Integer(connection.select_value('SELECT id2 FROM dependant2a'))).to eq 6
           end
 
           it 'fails to update view if column used by dependant view is removed' do
@@ -107,7 +107,7 @@ describe ActiveRecordViews do
               create_test_view "select 'foo'::text as name"
             }.to raise_error ActiveRecord::StatementInvalid, /column test.id does not exist/
             expect(test_view_sql).to eq 'SELECT 1 AS id;'
-            expect(connection.select_value('SELECT id2 FROM dependant2a')).to eq '2'
+            expect(Integer(connection.select_value('SELECT id2 FROM dependant2a'))).to eq 2
           end
         end
 
