@@ -12,8 +12,6 @@ module ActiveRecordViews
 
     module ClassMethods
       def is_view(*args)
-        return if ActiveRecordViews::Extension.currently_migrating?
-
         cattr_accessor :view_options
         self.view_options = args.extract_options!
 
@@ -26,7 +24,9 @@ module ActiveRecordViews
           ActiveRecordViews.read_sql_file(sql_path)
         end
 
-        ActiveRecordViews.create_view self.connection, self.table_name, self.name, sql, self.view_options
+        unless ActiveRecordViews::Extension.currently_migrating?
+          ActiveRecordViews.create_view self.connection, self.table_name, self.name, sql, self.view_options
+        end
       end
 
       def refresh_view!(options = {})
