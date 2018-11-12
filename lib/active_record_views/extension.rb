@@ -24,8 +24,9 @@ module ActiveRecordViews
           ActiveRecordViews.read_sql_file(sql_path)
         end
 
+        create_args = [self.table_name, self.name, sql, self.view_options]
         unless ActiveRecordViews::Extension.currently_migrating?
-          ActiveRecordViews.create_view self.connection, self.table_name, self.name, sql, self.view_options
+          ActiveRecordViews.create_view self.connection, *create_args
         end
       end
 
