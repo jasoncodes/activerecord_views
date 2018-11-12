@@ -44,7 +44,6 @@ RSpec.configure do |config|
       connection.execute "DROP MATERIALIZED VIEW IF EXISTS #{connection.quote_table_name view_name} CASCADE"
     end
   end
-
 end
 
 def test_request
