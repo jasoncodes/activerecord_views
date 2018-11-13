@@ -31,6 +31,24 @@ describe 'rake tasks' do
       rake 'db:migrate', cache_classes: true
       expect(view_names).to_not be_empty
     end
+
+    context 'with unregistered view' do
+      before do
+        ActiveRecordViews.create_view ActiveRecord::Base.connection, 'old_view', 'OldView', 'SELECT 42 AS id'
+      end
+
+      it 'does not drop unregistered views' do
+        expect(view_names).to include 'old_view'
+        rake 'db:migrate'
+        expect(view_names).to include 'old_view'
+      end
+
+      it 'drops unregistered views when classes are cached (production mode)' do
+        expect(view_names).to include 'old_view'
+        rake 'db:migrate', cache_classes: true
+        expect(view_names).to_not include 'old_view'
+      end
+    end
   end
 
   describe 'db:structure:dump' do

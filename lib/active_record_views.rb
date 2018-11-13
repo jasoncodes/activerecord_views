@@ -320,4 +320,12 @@ module ActiveRecordViews
       end
     end
   end
+
+  def self.drop_unregistered_views!
+    connection = ActiveRecord::Base.connection
+
+    connection.select_rows('SELECT name, class_name FROM active_record_views')
+      .reject { |name, class_name| Object.const_defined? class_name }
+      .each { |name, class_name| ActiveRecordViews.drop_view connection, name }
+  end
 end
