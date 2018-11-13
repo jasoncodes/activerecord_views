@@ -4,6 +4,18 @@ module ActiveRecordViews
   module Extension
     extend ActiveSupport::Concern
 
+    mattr_accessor :create_enabled
+    self.create_enabled = true
+
+    mattr_accessor :create_queue
+    self.create_queue = []
+
+    def self.process_create_queue!
+      while create_args = create_queue.shift
+        ActiveRecordViews.create_view ActiveRecord::Base.connection, *create_args
+      end
+    end
+
     def self.currently_migrating?
       if defined?(Rake) && Rake.respond_to?(:application)
         Rake.application.top_level_tasks.any? { |task_name| task_name =~ /^db:migrate($|:)/ }
@@ -25,8 +37,10 @@ module ActiveRecordViews
         end
 
         create_args = [self.table_name, self.name, sql, self.view_options]
-        unless ActiveRecordViews::Extension.currently_migrating?
+        if ActiveRecordViews::Extension.create_enabled && !ActiveRecordViews::Extension.currently_migrating?
           ActiveRecordViews.create_view self.connection, *create_args
+        else
+          ActiveRecordViews::Extension.create_queue << create_args
         end
       end
 

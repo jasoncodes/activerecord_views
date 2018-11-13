@@ -1,3 +1,10 @@
+Rake::Task['db:migrate'].enhance do
+  if Rails.application.config.cache_classes
+    Rails.application.eager_load!
+    ActiveRecordViews::Extension.process_create_queue!
+  end
+end
+
 Rake::Task['db:structure:dump'].enhance do
   table_exists = if Rails::VERSION::MAJOR >= 5
     ActiveRecord::Base.connection.data_source_exists?('active_record_views')

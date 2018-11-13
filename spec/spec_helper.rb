@@ -94,3 +94,11 @@ def without_dependency_checks
 ensure
   allow(ActiveRecordViews).to receive(:check_dependencies).and_call_original
 end
+
+def without_create_enabled
+  old_enabled = ActiveRecordViews::Extension.create_enabled
+  ActiveRecordViews::Extension.create_enabled = false
+  yield
+ensure
+  ActiveRecordViews::Extension.create_enabled = old_enabled
+end

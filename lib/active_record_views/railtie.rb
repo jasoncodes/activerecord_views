@@ -7,6 +7,7 @@ module ActiveRecordViews
       end
 
       ActiveSupport.on_load :action_controller do
+        ActiveRecordViews::Extension.create_enabled = !app.config.cache_classes
         unless app.config.cache_classes
           ActionDispatch::Callbacks.before do
             ActiveRecordViews.reload_stale_views!

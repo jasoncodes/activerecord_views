@@ -1,13 +1,36 @@
 require 'spec_helper'
 
 describe 'rake tasks' do
-  def rake(task_name)
+  def rake(task_name, cache_classes: false)
     system(*%W[
       rake
       -f spec/internal/Rakefile
       #{task_name}
+      CACHE_CLASSES=#{cache_classes}
     ])
     raise unless $?.success?
+  end
+
+  describe 'db:migrate' do
+    def view_names
+      ActiveRecord::Base.connection.select_values(<<~SQL.squish)
+        SELECT table_name
+        FROM information_schema.views
+        WHERE table_schema = 'public'
+      SQL
+    end
+
+    it 'does not create any database views' do
+      expect(view_names).to be_empty
+      rake 'db:migrate'
+      expect(view_names).to be_empty
+    end
+
+    it 'creates database views when classes are cached (production mode)' do
+      expect(view_names).to be_empty
+      rake 'db:migrate', cache_classes: true
+      expect(view_names).to_not be_empty
+    end
   end
 
   describe 'db:structure:dump' do

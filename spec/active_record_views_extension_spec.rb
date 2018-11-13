@@ -353,5 +353,32 @@ describe ActiveRecordViews::Extension do
         dependency_check_good_unmanageds
       ]
     end
+
+    context 'without create_enabled' do
+      around do |example|
+        without_create_enabled(&example)
+      end
+
+      it 'delays create_view until process_create_queue! is called' do
+        allow(ActiveRecordViews).to receive(:create_view).and_call_original
+
+        expect(ActiveRecordViews::Extension.create_queue.size).to eq 0
+        expect(ActiveRecordViews).to_not have_received(:create_view)
+
+        expect {
+          expect(HeredocTestModel.first.name).to eq 'Here document'
+        }.to raise_error ActiveRecord::StatementInvalid
+
+        expect(ActiveRecordViews::Extension.create_queue.size).to eq 1
+        expect(ActiveRecordViews).to_not have_received(:create_view)
+
+        ActiveRecordViews::Extension.process_create_queue!
+
+        expect(ActiveRecordViews::Extension.create_queue.size).to eq 0
+        expect(ActiveRecordViews).to have_received(:create_view)
+
+        expect(HeredocTestModel.first.name).to eq 'Here document'
+      end
+    end
   end
 end
