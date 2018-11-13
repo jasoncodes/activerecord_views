@@ -2,4 +2,5 @@
 Gemfile.lock
 gemfiles/*.gemfile.lock
 pkg
+spec/internal/db/schema.rb
 spec/internal/log/*.log

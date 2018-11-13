@@ -6,6 +6,10 @@ $VERBOSE = true
 
 require 'combustion'
 require 'active_record_views'
+
+FileUtils.mkdir_p 'spec/internal/db'
+File.write 'spec/internal/db/schema.rb', ''
+
 Combustion.initialize! :active_record, :action_controller do
   config.cache_classes = false
 end
