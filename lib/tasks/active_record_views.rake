@@ -1,5 +1,5 @@
 Rake::Task['db:migrate'].enhance do
-  if Rails.application.config.cache_classes
+  unless ActiveRecordViews::Extension.create_enabled
     Rails.application.eager_load!
     ActiveRecordViews::Extension.process_create_queue!
     ActiveRecordViews.drop_unregistered_views!

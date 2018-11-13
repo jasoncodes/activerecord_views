@@ -8,7 +8,8 @@ Combustion::Database.instance_eval do
 end
 
 Combustion.initialize! :active_record, :action_controller do
-  config.cache_classes = ENV['CACHE_CLASSES'] == 'true'
+  config.cache_classes = false
+  config.log_level = :debug
 end
 
 load 'active_record/railties/databases.rake'

@@ -4,7 +4,7 @@ module ActiveRecordViews
       ActiveSupport.on_load :active_record do
         ActiveRecordViews.sql_load_path << Rails.root + 'app/models'
         ActiveRecordViews.init!
-        ActiveRecordViews::Extension.create_enabled = !app.config.cache_classes
+        ActiveRecordViews::Extension.create_enabled = !Rails.env.production?
       end
 
       ActiveSupport.on_load :action_controller do

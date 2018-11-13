@@ -1,12 +1,12 @@
 require 'spec_helper'
 
 describe 'rake tasks' do
-  def rake(task_name, cache_classes: false)
+  def rake(task_name, production: false)
     system(*%W[
       rake
       -f spec/internal/Rakefile
       #{task_name}
-      CACHE_CLASSES=#{cache_classes}
+      RAILS_ENV=#{production ? 'production' : 'development'}
     ])
     raise unless $?.success?
   end
@@ -26,9 +26,9 @@ describe 'rake tasks' do
       expect(view_names).to be_empty
     end
 
-    it 'creates database views when classes are cached (production mode)' do
+    it 'creates database views in production mode' do
       expect(view_names).to be_empty
-      rake 'db:migrate', cache_classes: true
+      rake 'db:migrate', production: true
       expect(view_names).to_not be_empty
     end
 
@@ -43,9 +43,9 @@ describe 'rake tasks' do
         expect(view_names).to include 'old_view'
       end
 
-      it 'drops unregistered views when classes are cached (production mode)' do
+      it 'drops unregistered views in production mode' do
         expect(view_names).to include 'old_view'
-        rake 'db:migrate', cache_classes: true
+        rake 'db:migrate', production: true
         expect(view_names).to_not include 'old_view'
       end
     end
