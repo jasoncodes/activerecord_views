@@ -1,13 +1,21 @@
 require 'spec_helper'
 
 describe 'rake tasks' do
+  def rake(task_name)
+    system(*%W[
+      rake
+      -f spec/internal/Rakefile
+      #{task_name}
+    ])
+    raise unless $?.success?
+  end
+
   describe 'db:structure:dump' do
     it 'copies over activerecord_views data' do
       ActiveRecordViews.create_view ActiveRecord::Base.connection, 'test_view', 'TestView', 'SELECT 1'
 
       FileUtils.rm_f 'spec/internal/db/structure.sql'
-      system("rake -f spec/internal/Rakefile db:structure:dump")
-      raise unless $?.success?
+      rake 'db:structure:dump'
 
       sql = File.read('spec/internal/db/structure.sql')
       FileUtils.rm_f 'spec/internal/db/structure.sql'
