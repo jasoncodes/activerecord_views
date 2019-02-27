@@ -120,6 +120,21 @@ describe ActiveRecordViews do
             expect(view_names).to match_array %w[unmanaged]
           end
 
+          it 'support being ran inside a transaction' do
+            expect(ActiveRecordViews).to receive(:without_transaction).at_least(:once).and_wrap_original do |original, *args, &block|
+              original.call(*args) do |new_connection|
+                new_connection.execute 'SET statement_timeout = 1000'
+                block.call(new_connection)
+              end
+            end
+
+            connection.transaction requires_new: true do
+              expect {
+                ActiveRecordViews.drop_all_views connection
+              }.to change { view_names }
+            end
+          end
+
           it 'errors if an unmanaged view depends on a managed view' do
             connection.execute 'CREATE VIEW unmanaged AS SELECT * from dependant2a'
 
