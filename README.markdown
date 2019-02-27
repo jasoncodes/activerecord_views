@@ -70,7 +70,7 @@ end
 
 ## Dependencies
 
-You can use an view model from another view model or within SQL blocks in your application code.
+You can use a view model from another view model or within SQL blocks in your application code.
 In order to ensure the model file is loaded (and thus the view is created), you should reference
 the model class when you use the view rather than using the database table name directly:
 
