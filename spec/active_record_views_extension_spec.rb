@@ -227,6 +227,23 @@ describe ActiveRecordViews::Extension do
       expect(EnsurePopulatedFoo.view_populated?).to eq true
     end
 
+    it 'invalidates ActiveRecord query cache after populating' do
+      class EnsurePopulatedCache < ActiveRecord::Base
+        is_view 'SELECT 1 AS id;', materialized: true
+      end
+
+      expect(ActiveRecord::Base.connection).to receive(:execute).with(/^REFRESH MATERIALIZED VIEW/).once.and_call_original
+      allow(ActiveRecord::Base.connection).to receive(:execute).and_call_original
+
+      ActiveRecord::Base.connection.cache do
+        expect(EnsurePopulatedCache.view_populated?).to eq false
+        EnsurePopulatedCache.ensure_populated!
+        expect(EnsurePopulatedCache.view_populated?).to eq true
+        EnsurePopulatedCache.ensure_populated!
+        expect(EnsurePopulatedCache.view_populated?).to eq true
+      end
+    end
+
     it 'supports refreshing materialized views concurrently' do
       class MaterializedViewRefreshTestModel < ActiveRecord::Base
         is_view 'SELECT 1 AS id;', materialized: true

@@ -61,6 +61,7 @@ module ActiveRecordViews
         connection.transaction do
           connection.execute "REFRESH MATERIALIZED VIEW#{' CONCURRENTLY' if concurrent} #{connection.quote_table_name self.table_name};"
           connection.execute "UPDATE active_record_views SET refreshed_at = current_timestamp AT TIME ZONE 'UTC' WHERE name = #{connection.quote self.table_name};"
+          connection.clear_query_cache
         end
       end
 
