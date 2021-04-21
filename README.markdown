@@ -127,7 +127,7 @@ ActiveRecordViews also has a convenience method called `ensure_populated!` which
 
 PostgreSQL 9.4 supports refreshing materialized views concurrently. This allows other processes to continue reading old cached data while the view is being updated. To use this feature you must have define a unique index on the materialized view:
 
-```sql
+```ruby
 class AccountBalance < ActiveRecord::Base
   is_view materialized: true, unique_columns: %w[account_id]
 end
