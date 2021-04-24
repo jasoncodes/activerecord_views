@@ -7,8 +7,8 @@ module ActiveRecordViews
         ActiveRecordViews::Extension.create_enabled = !Rails.env.production?
       end
 
-      ActiveSupport.on_load :action_controller do
-        unless app.config.cache_classes
+      unless app.config.cache_classes
+        ActiveSupport.on_load :action_controller do
           ActionDispatch::Callbacks.before do
             ActiveRecordViews.reload_stale_views!
           end
