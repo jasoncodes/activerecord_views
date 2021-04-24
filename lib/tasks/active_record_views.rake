@@ -25,7 +25,6 @@ Rake::Task[schema_rake_task].enhance do
     if defined? ActiveRecord::Tasks::DatabaseTasks
       tasks = ActiveRecord::Tasks::DatabaseTasks
       config = tasks.current_config
-      tasks.send(:class_for_adapter, config.fetch('adapter')).new(config)
       pg_tasks = tasks.send(:class_for_adapter, config.fetch('adapter')).new(config)
       pg_tasks.send(:set_psql_env)
     else
