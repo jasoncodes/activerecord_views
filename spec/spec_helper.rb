@@ -23,6 +23,11 @@ RSpec.configure do |config|
   config.filter_run_excluding skip: true
   config.example_status_persistence_file_path = 'tmp/examples.txt'
 
+  config.mock_with :rspec do |mocks|
+    mocks.verify_doubled_constant_names = true
+    mocks.verify_partial_doubles = true
+  end
+
   config.before do
     if Rails::VERSION::MAJOR >= 5
       Rails.application.reloader.reload!
