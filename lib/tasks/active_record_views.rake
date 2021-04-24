@@ -30,7 +30,9 @@ Rake::Task[schema_rake_task].enhance do
     end
 
     config = tasks.current_config
-    pg_tasks = tasks.send(:class_for_adapter, config.fetch('adapter')).new(config)
+    adapter = config.fetch('adapter')
+
+    pg_tasks = tasks.send(:class_for_adapter, adapter).new(config)
     pg_tasks.send(:set_psql_env)
 
     require 'shellwords'
