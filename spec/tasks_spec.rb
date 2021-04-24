@@ -50,23 +50,36 @@ describe 'rake tasks' do
     end
   end
 
-  describe 'db:structure:dump' do
+  schema_rake_task = Gem::Version.new(Rails.version) >= Gem::Version.new("6.1") ? 'db:schema:dump' : 'db:structure:dump'
+  describe schema_rake_task do
     before do
+      FileUtils.rm_f 'spec/internal/db/schema.rb'
       FileUtils.rm_f 'spec/internal/db/structure.sql'
 
       ActiveRecordViews.create_view ActiveRecord::Base.connection, 'test_view', 'TestView', 'SELECT 1'
     end
 
     after do
+      FileUtils.rm_f 'spec/internal/db/schema.rb'
       FileUtils.rm_f 'spec/internal/db/structure.sql'
+
+      File.write 'spec/internal/db/schema.rb', ''
     end
 
     it 'copies over activerecord_views data' do
-      rake 'db:structure:dump'
+      rake schema_rake_task
 
+      expect(File.exist?('spec/internal/db/schema.rb')).to eq false
       sql = File.read('spec/internal/db/structure.sql')
       expect(sql).to match(/COPY public\.active_record_views.+test_view\tTestView/m)
       expect(sql).to match(/UPDATE public\.active_record_views SET refreshed_at = NULL/)
+    end
+
+    it 'does not write structure.sql when `schema_format = :ruby`', if: schema_rake_task != 'db:structure:dump' do
+      rake schema_rake_task, env: {'SCHEMA_FORMAT' => 'ruby'}
+
+      expect(File.exist?('spec/internal/db/schema.rb')).to eq true
+      expect(File.exist?('spec/internal/db/structure.sql')).to eq false
     end
   end
 end

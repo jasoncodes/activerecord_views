@@ -11,6 +11,7 @@ end
 Combustion.initialize! :active_record, :action_controller do
   config.cache_classes = false
   config.log_level = :debug
+  config.active_record.schema_format = ENV.fetch('SCHEMA_FORMAT', 'sql').to_sym
 end
 
 load 'active_record/railties/databases.rake'
