@@ -49,11 +49,12 @@ describe ActiveRecordViews::ChecksumCache do
       end
 
       it 'drops existing managed views recreates the table' do
-        expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ABEGIN\z/).once.and_call_original
+        extra_transaction_args = Gem::Version.new(Rails.version) >= Gem::Version.new("6.1") ? %w[TRANSACTION] : %w[]
+        expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ABEGIN\z/, *extra_transaction_args).once.and_call_original
         expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ADROP VIEW IF EXISTS test_view CASCADE;\z/).once.and_call_original
         expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ADROP TABLE active_record_views;\z/).once.and_call_original
         expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ACREATE TABLE active_record_views/).once.and_call_original
-        expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ACOMMIT\z/).once.and_call_original
+        expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ACOMMIT\z/, *extra_transaction_args).once.and_call_original
 
         expect(connection.column_exists?('active_record_views', 'class_name')).to eq false
         expect(ActiveRecordViews.view_exists?(connection, 'test_view')).to eq true

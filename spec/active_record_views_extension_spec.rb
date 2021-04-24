@@ -263,7 +263,8 @@ describe ActiveRecordViews::Extension do
         "UPDATE active_record_views SET refreshed_at = current_timestamp AT TIME ZONE 'UTC' WHERE name = 'materialized_view_concurrent_refresh_test_models';",
         'COMMIT',
       ].each do |sql|
-        expect(ActiveRecord::Base.connection).to receive(:execute).with(sql).once.and_call_original
+        extra_args = Gem::Version.new(Rails.version) >= Gem::Version.new("6.1") && %w[BEGIN COMMIT].include?(sql) ? %w[TRANSACTION] : %w[]
+        expect(ActiveRecord::Base.connection).to receive(:execute).with(sql, *extra_args).once.and_call_original
       end
 
       MaterializedViewRefreshTestModel.refresh_view!
@@ -285,7 +286,8 @@ describe ActiveRecordViews::Extension do
         "UPDATE active_record_views SET refreshed_at = current_timestamp AT TIME ZONE 'UTC' WHERE name = 'materialized_view_auto_refresh_test_models';",
         'COMMIT',
       ].each do |sql|
-        expect(ActiveRecord::Base.connection).to receive(:execute).with(sql).once.and_call_original
+        extra_args = Gem::Version.new(Rails.version) >= Gem::Version.new("6.1") && %w[BEGIN COMMIT].include?(sql) ? %w[TRANSACTION] : %w[]
+        expect(ActiveRecord::Base.connection).to receive(:execute).with(sql, *extra_args).once.and_call_original
       end
 
       MaterializedViewAutoRefreshTestModel.refresh_view! concurrent: :auto
