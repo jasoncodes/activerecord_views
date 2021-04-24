@@ -2,6 +2,10 @@ require 'spec_helper'
 
 describe ActiveRecordViews::Extension do
   describe '.is_view' do
+    def registered_model_class_names
+      ActiveRecordViews.registered_views.map(&:model_class_name)
+    end
+
     it 'creates database views from heredocs' do
       expect(ActiveRecordViews).to receive(:create_view).once.and_call_original
       expect(HeredocTestModel.first.name).to eq 'Here document'
@@ -39,6 +43,7 @@ describe ActiveRecordViews::Extension do
             is_view
           end
         }.to change { begin; ModifiedFileTestModel.take!.test; rescue NameError; end }.from(nil).to('foo')
+          .and change { registered_model_class_names.include?('ModifiedFileTestModel') }.from(false).to(true)
 
         expect {
           update_file sql_file, "SELECT 'bar'::text AS test, 42::integer AS test2"
@@ -102,7 +107,9 @@ describe ActiveRecordViews::Extension do
         File.unlink sql_file
 
         expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ADROP/).once.and_call_original
-        test_request
+        expect {
+          test_request
+        }.to change { registered_model_class_names.include?('DeletedFileTestModel') }.from(true).to(false)
         test_request # second request does not `drop_view` again
 
         expect {
