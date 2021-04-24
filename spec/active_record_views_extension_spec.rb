@@ -179,7 +179,7 @@ describe ActiveRecordViews::Extension do
         MaterializedViewTestModel.refresh_view!
 
         expect(MaterializedViewTestModel.view_populated?).to eq true
-        expect(MaterializedViewTestModel.refreshed_at).to be_a ActiveSupport::TimeWithZone
+        expect(MaterializedViewTestModel.refreshed_at).to be_a Time
         expect(MaterializedViewTestModel.refreshed_at.zone).to eq 'UTC'
         expect(MaterializedViewTestModel.refreshed_at).to be_within(1.second).of Time.now
 
