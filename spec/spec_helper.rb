@@ -19,6 +19,7 @@ require 'rspec/rails'
 
 RSpec.configure do |config|
   config.use_transactional_fixtures = false
+  config.example_status_persistence_file_path = 'tmp/examples.txt'
 
   config.before do
     if Rails::VERSION::MAJOR >= 5
