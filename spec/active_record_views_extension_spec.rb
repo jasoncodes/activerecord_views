@@ -29,32 +29,35 @@ describe ActiveRecordViews::Extension do
     end
 
     it 'reloads the database view when external SQL file is modified' do
-      %w[foo bar baz].each do |sql|
-        expect(ActiveRecordViews).to receive(:create_view).with(
-          anything,
-          'modified_file_test_models',
-          'ModifiedFileTestModel',
-          sql,
-          {}
-        ).once.ordered
-      end
-
       with_temp_sql_dir do |temp_dir|
         sql_file = File.join(temp_dir, 'modified_file_test_model.sql')
-        update_file sql_file, 'foo'
+        update_file sql_file, "SELECT 'foo'::text AS test"
 
-        class ModifiedFileTestModel < ActiveRecord::Base
-          is_view
-        end
+        expect {
+          expect(ActiveRecordViews).to receive(:create_view).once.and_call_original
+          class ModifiedFileTestModel < ActiveRecord::Base
+            is_view
+          end
+        }.to change { begin; ModifiedFileTestModel.take!.test; rescue NameError; end }.from(nil).to('foo')
 
-        update_file sql_file, 'bar'
+        expect {
+          update_file sql_file, "SELECT 'bar'::text AS test"
+        }.to_not change { ModifiedFileTestModel.take!.test }
 
-        test_request
-        test_request # second request does not `create_view` again
+        expect {
+          expect(ActiveRecordViews).to receive(:create_view).once.and_call_original
+          test_request
+          test_request # second request does not `create_view` again
+        }.to change { ModifiedFileTestModel.take!.test }.to('bar')
 
-        update_file sql_file, 'baz'
+        expect {
+          update_file sql_file, "SELECT 'baz'::text AS test"
+        }.to_not change { ModifiedFileTestModel.take!.test }
 
-        test_request
+        expect {
+          expect(ActiveRecordViews).to receive(:create_view).once.and_call_original
+          test_request
+        }.to change { ModifiedFileTestModel.take!.test }.to('baz')
       end
       test_request # trigger cleanup
     end
