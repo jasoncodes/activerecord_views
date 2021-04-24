@@ -41,7 +41,7 @@ describe ActiveRecordViews::Extension do
         }.to change { begin; ModifiedFileTestModel.take!.test; rescue NameError; end }.from(nil).to('foo')
 
         expect {
-          update_file sql_file, "SELECT 'bar'::text AS test"
+          update_file sql_file, "SELECT 'bar'::text AS test, 42::integer AS test2"
         }.to_not change { ModifiedFileTestModel.take!.test }
 
         expect {
@@ -49,6 +49,7 @@ describe ActiveRecordViews::Extension do
           test_request
           test_request # second request does not `create_view` again
         }.to change { ModifiedFileTestModel.take!.test }.to('bar')
+          .and change { ModifiedFileTestModel.column_names }.from(%w[test]).to(%w[test test2])
 
         expect {
           update_file sql_file, "SELECT 'baz'::text AS test"
