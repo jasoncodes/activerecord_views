@@ -31,12 +31,13 @@ Rake::Task[schema_rake_task].enhance do
 
     config = tasks.current_config
     adapter = config.fetch('adapter')
+    database = config.fetch('database')
 
     pg_tasks = tasks.send(:class_for_adapter, adapter).new(config)
     pg_tasks.send(:set_psql_env)
 
     require 'shellwords'
-    system("pg_dump --data-only --table=active_record_views #{Shellwords.escape config['database']} >> #{Shellwords.escape filename}")
+    system("pg_dump --data-only --table=active_record_views #{Shellwords.escape database} >> #{Shellwords.escape filename}")
     raise 'active_record_views metadata dump failed' unless $?.success?
 
     File.open filename, 'a' do |io|
