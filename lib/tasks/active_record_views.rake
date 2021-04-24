@@ -29,9 +29,21 @@ Rake::Task[schema_rake_task].enhance do
       tasks.schema_file
     end
 
-    config = tasks.current_config
-    adapter = config.fetch('adapter')
-    database = config.fetch('database')
+    config = if ActiveRecord::Base.configurations.respond_to?(:configs_for)
+      ActiveRecord::Base.configurations.configs_for(env_name: Rails.env, name: 'primary')
+    else
+      tasks.current_config
+    end
+    adapter = if config.respond_to?(:adapter)
+      config.adapter
+    else
+      config.fetch('adapter')
+    end
+    database = if config.respond_to?(:database)
+      config.database
+    else
+      config.fetch('database')
+    end
 
     pg_tasks = tasks.send(:class_for_adapter, adapter).new(config)
     pg_tasks.send(:set_psql_env)
