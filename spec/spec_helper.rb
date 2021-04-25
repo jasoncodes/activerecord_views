@@ -73,18 +73,6 @@ def test_request
   end
 end
 
-def with_temp_sql_dir
-  Dir.mktmpdir do |temp_dir|
-    begin
-      old_sql_load_path = ActiveRecordViews.sql_load_path
-      ActiveRecordViews.sql_load_path = [temp_dir] + old_sql_load_path
-      yield temp_dir
-    ensure
-      ActiveRecordViews.sql_load_path = old_sql_load_path
-    end
-  end
-end
-
 def update_file(file, new_content)
   time = File.exist?(file) ? File.mtime(file) : Time.parse('2012-01-01')
   time = time + 1
