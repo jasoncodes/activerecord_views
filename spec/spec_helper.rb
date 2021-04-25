@@ -67,10 +67,13 @@ RSpec.configure do |config|
 end
 
 def test_request
-  begin
-    Rails.application.call({'REQUEST_METHOD' => 'GET', 'PATH_INFO' => '/'})
-  rescue ActionController::RoutingError
-  end
+  status, headers, body = Rails.application.call(
+    'REQUEST_METHOD' => 'GET',
+    'PATH_INFO' => '/',
+    'rack.input' => StringIO.new,
+  )
+  expect(status).to eq 204
+  body.close
 end
 
 def update_file(file, new_content)
