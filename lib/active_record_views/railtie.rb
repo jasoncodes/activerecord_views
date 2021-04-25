@@ -2,7 +2,7 @@ module ActiveRecordViews
   class Railtie < ::Rails::Railtie
     initializer 'active_record_views' do |app|
       ActiveSupport.on_load :active_record do
-        ActiveRecordViews.sql_load_path << Rails.root + 'app/models'
+        ActiveRecordViews.sql_load_path += Rails.application.config.paths['app/models'].to_a
         ActiveRecordViews.init!
         ActiveRecordViews::Extension.create_enabled = !Rails.env.production?
       end
