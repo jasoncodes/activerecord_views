@@ -97,13 +97,17 @@ describe ActiveRecordViews::Extension do
       sql_file = File.join(TEST_TEMP_MODEL_DIR, 'deleted_file_test_model.sql')
       File.write sql_file, "SELECT 1 AS id, 'delete test'::text AS name"
 
-      class DeletedFileTestModel < ActiveRecord::Base
-        is_view
-      end
+      rb_file = 'spec/internal/app/models_temp/deleted_file_test_model.rb'
+      File.write rb_file, <<~RB
+        class DeletedFileTestModel < ActiveRecord::Base
+          is_view
+        end
+      RB
 
       expect(DeletedFileTestModel.first.name).to eq 'delete test'
 
       File.unlink sql_file
+      File.unlink rb_file
 
       expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ADROP/).once.and_call_original
       expect {
