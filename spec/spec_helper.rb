@@ -12,6 +12,10 @@ require 'active_record_views'
 FileUtils.mkdir_p 'spec/internal/db'
 File.write 'spec/internal/db/schema.rb', ''
 
+TEST_TEMP_MODEL_DIR = Rails.root + 'spec/internal/app/models_temp'
+FileUtils.mkdir_p TEST_TEMP_MODEL_DIR
+Rails.application.config.paths['app/models'] << 'app/models_temp'
+
 Combustion.initialize! :active_record, :action_controller do
   config.cache_classes = false
 end
@@ -29,6 +33,8 @@ RSpec.configure do |config|
   end
 
   config.before do
+    FileUtils.rm_rf Dir["spec/internal/app/models_temp/*"]
+
     if Rails::VERSION::MAJOR >= 5
       Rails.application.reloader.reload!
     else
