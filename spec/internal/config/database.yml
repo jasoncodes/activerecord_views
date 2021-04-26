@@ -2,6 +2,7 @@ test: &test
   adapter: postgresql
   database: activerecord_views_test
   min_messages: warning
+  advisory_locks: <%= !Rails.version.start_with?('6.0.') %>
 development:
   <<: *test
 production:
