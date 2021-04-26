@@ -6,6 +6,15 @@ describe ActiveRecordViews::Extension do
       ActiveRecordViews.registered_views.map(&:model_class_name)
     end
 
+    def view_exists?(name)
+      connection = ActiveRecord::Base.connection
+      if connection.respond_to?(:view_exists?)
+        connection.view_exists?(name)
+      else
+        connection.table_exists?(name)
+      end
+    end
+
     it 'creates database views from heredocs' do
       expect(ActiveRecordViews).to receive(:create_view).once.and_call_original
       expect(HeredocTestModel.first.name).to eq 'Here document'
@@ -113,11 +122,9 @@ describe ActiveRecordViews::Extension do
       expect {
         test_request
       }.to change { registered_model_class_names.include?('DeletedFileTestModel') }.from(true).to(false)
+        .and change { view_exists?('deleted_file_test_models') }.from(true).to(false)
       test_request # second request does not `drop_view` again
 
-      expect {
-        DeletedFileTestModel.first.name
-      }.to raise_error ActiveRecord::StatementInvalid, /relation "deleted_file_test_models" does not exist/
     end
 
     it 'does not create if database view is initially up to date' do
@@ -198,11 +205,10 @@ describe ActiveRecordViews::Extension do
       expect(MaterializedViewTestModel.first!.id).to eq 123
 
       File.unlink sql_file
-      test_request
 
       expect {
-        MaterializedViewTestModel.first!
-      }.to raise_error ActiveRecord::StatementInvalid, /relation "materialized_view_test_models" does not exist/
+        test_request
+      }.to change { view_exists?('materialized_view_test_models') }.from(true).to(false)
     end
 
     it 'raises an error for `view_populated?` if view is not materialized' do
