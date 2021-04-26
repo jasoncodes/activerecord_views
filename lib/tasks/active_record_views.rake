@@ -30,7 +30,11 @@ Rake::Task[schema_rake_task].enhance do
     end
 
     config = if ActiveRecord::Base.configurations.respond_to?(:configs_for)
-      ActiveRecord::Base.configurations.configs_for(env_name: Rails.env, name: 'primary')
+      if Rails.version.start_with?('6.0.')
+        ActiveRecord::Base.configurations.configs_for(env_name: Rails.env, spec_name: 'primary').config
+      else
+        ActiveRecord::Base.configurations.configs_for(env_name: Rails.env, name: 'primary')
+      end
     else
       tasks.current_config
     end
