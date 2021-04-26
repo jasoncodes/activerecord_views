@@ -66,14 +66,24 @@ RSpec.configure do |config|
   end
 end
 
+def with_reloader(&block)
+  if Rails.application.respond_to?(:reloader)
+    Rails.application.reloader.wrap(&block)
+  else
+    block.call
+  end
+end
+
 def test_request
-  status, headers, body = Rails.application.call(
-    'REQUEST_METHOD' => 'GET',
-    'PATH_INFO' => '/',
-    'rack.input' => StringIO.new,
-  )
-  expect(status).to eq 204
-  body.close
+  with_reloader do
+    status, headers, body = Rails.application.call(
+      'REQUEST_METHOD' => 'GET',
+      'PATH_INFO' => '/',
+      'rack.input' => StringIO.new,
+    )
+    expect(status).to eq 204
+    body.close
+  end
 end
 
 def update_file(file, new_content)

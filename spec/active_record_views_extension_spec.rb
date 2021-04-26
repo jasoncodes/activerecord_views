@@ -113,7 +113,9 @@ describe ActiveRecordViews::Extension do
         end
       RB
 
-      expect(DeletedFileTestModel.first.name).to eq 'delete test'
+      with_reloader do
+        expect(DeletedFileTestModel.first.name).to eq 'delete test'
+      end
 
       File.unlink sql_file
       File.unlink rb_file
@@ -125,6 +127,11 @@ describe ActiveRecordViews::Extension do
         .and change { view_exists?('deleted_file_test_models') }.from(true).to(false)
       test_request # second request does not `drop_view` again
 
+      if Rails::VERSION::MAJOR >= 5
+        expect {
+          DeletedFileTestModel.first.name
+        }.to raise_error NameError, 'uninitialized constant DeletedFileTestModel'
+      end
     end
 
     it 'does not create if database view is initially up to date' do
