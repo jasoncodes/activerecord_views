@@ -1,12 +1,11 @@
 require 'spec_helper'
 
 describe 'rake tasks' do
-  def rake(task_name, production: false)
-    system(*%W[
+  def rake(task_name, env: {})
+    system(env, *%W[
       rake
       -f spec/internal/Rakefile
       #{task_name}
-      RAILS_ENV=#{production ? 'production' : 'development'}
     ])
     raise unless $?.success?
   end
@@ -28,7 +27,7 @@ describe 'rake tasks' do
 
     it 'creates database views in production mode' do
       expect(view_names).to be_empty
-      rake 'db:migrate', production: true
+      rake 'db:migrate', env: {'RAILS_ENV' => 'production'}
       expect(view_names).to_not be_empty
     end
 
@@ -45,7 +44,7 @@ describe 'rake tasks' do
 
       it 'drops unregistered views in production mode' do
         expect(view_names).to include 'old_view'
-        rake 'db:migrate', production: true
+        rake 'db:migrate', env: {'RAILS_ENV' => 'production'}
         expect(view_names).to_not include 'old_view'
       end
     end
