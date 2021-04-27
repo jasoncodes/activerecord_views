@@ -31,6 +31,12 @@ describe 'rake tasks' do
       expect(view_names).to_not be_empty
     end
 
+    it 'does nothing in production mode without models' do
+      expect(view_names).to be_empty
+      rake 'db:migrate', env: {'RAILS_ENV' => 'production', 'SKIP_MODEL_EAGER_LOAD' => 'true'}
+      expect(view_names).to be_empty
+    end
+
     context 'with unregistered view' do
       before do
         ActiveRecordViews.create_view ActiveRecord::Base.connection, 'old_view', 'OldView', 'SELECT 42 AS id'

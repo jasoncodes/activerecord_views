@@ -328,6 +328,7 @@ module ActiveRecordViews
 
   def self.drop_unregistered_views!
     connection = ActiveRecord::Base.connection
+    ActiveRecordViews::ChecksumCache.new(connection)
 
     connection.select_rows('SELECT name, class_name FROM active_record_views')
       .reject { |name, class_name| Object.const_defined? class_name }
