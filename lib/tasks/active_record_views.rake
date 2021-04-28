@@ -20,9 +20,15 @@ Rake::Task[schema_rake_task].enhance do
   end
 
   if table_exists && ActiveRecord::Base.schema_format == :sql
-    filename = ENV['DB_STRUCTURE'] || File.join(Rails.root, "db", "structure.sql")
-
     tasks = ActiveRecord::Tasks::DatabaseTasks
+
+    filename = case
+    when tasks.respond_to?(:dump_filename)
+      tasks.dump_filename('primary')
+    else
+      tasks.schema_file
+    end
+
     config = tasks.current_config
     pg_tasks = tasks.send(:class_for_adapter, config.fetch('adapter')).new(config)
     pg_tasks.send(:set_psql_env)
