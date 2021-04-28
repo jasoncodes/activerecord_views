@@ -22,15 +22,10 @@ Rake::Task[schema_rake_task].enhance do
   if table_exists && ActiveRecord::Base.schema_format == :sql
     filename = ENV['DB_STRUCTURE'] || File.join(Rails.root, "db", "structure.sql")
 
-    if defined? ActiveRecord::Tasks::DatabaseTasks
-      tasks = ActiveRecord::Tasks::DatabaseTasks
-      config = tasks.current_config
-      pg_tasks = tasks.send(:class_for_adapter, config.fetch('adapter')).new(config)
-      pg_tasks.send(:set_psql_env)
-    else
-      config = current_config
-      set_psql_env(config)
-    end
+    tasks = ActiveRecord::Tasks::DatabaseTasks
+    config = tasks.current_config
+    pg_tasks = tasks.send(:class_for_adapter, config.fetch('adapter')).new(config)
+    pg_tasks.send(:set_psql_env)
 
     require 'shellwords'
     system("pg_dump --data-only --table=active_record_views #{Shellwords.escape config['database']} >> #{Shellwords.escape filename}")
