@@ -163,9 +163,11 @@ Rails.application.eager_load!
 
 ## Handling renames/deletions
 
-ActiveRecordViews tracks database views by their name. When an ActiveRecordViews model is renamed or deleted, there is no longer a link between the model and the associated database table. This means an orphan view will be left in the database.
+ActiveRecordViews tracks database views by their name. When an ActiveRecordViews model is renamed or deleted, there is no longer a link between the model and the associated database table. This means an orphan view would be left in the database.
 
-In order to keep things tidy and to avoid accidentally referencing a stale view, you should remove the view and associated ActiveRecordViews metadata when renaming or deleting a model using ActiveRecordViews. This is best done with a database migration (use `rails generate migration`) containing the following:
+ActiveRecordViews will automatically drop deleted views while checking for changes in both production mode when migrations are run and in development mode when code reloads (e.g. refreshing the browser).
+
+You should avoid dropping views using `DROP VIEW` as this will cause the internal state of ActiveRecordViews to become out of sync. If you want to drop an existing view manually you can instead run the following:
 
 ```ruby
 ActiveRecordViews.drop_view connection, 'account_balances'
@@ -176,6 +178,8 @@ Alternatively, all view models can be dropped with the following:
 ```ruby
 ActiveRecordViews.drop_all_views connection
 ```
+
+Dropping all views is most useful when doing significant structual changes. Both methods can be used in migrations where there are incompatible dependency changes that would otherwise error. ActiveRecordViews will automatically recreate views again when it next checks for pending changes (e.g. production migrations or dev reloading).
 
 ## Usage outside of Rails
 
