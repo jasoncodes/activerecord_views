@@ -16,12 +16,6 @@ module ActiveRecordViews
       end
     end
 
-    def self.currently_migrating?
-      if defined?(Rake) && Rake.respond_to?(:application)
-        Rake.application.top_level_tasks.any? { |task_name| task_name =~ /^db:migrate($|:)/ }
-      end
-    end
-
     module ClassMethods
       def is_view(*args)
         cattr_accessor :view_options
@@ -37,7 +31,7 @@ module ActiveRecordViews
         end
 
         create_args = [self.table_name, self.name, sql, self.view_options]
-        if ActiveRecordViews::Extension.create_enabled && !ActiveRecordViews::Extension.currently_migrating?
+        if ActiveRecordViews::Extension.create_enabled
           ActiveRecordViews.create_view self.connection, *create_args
         else
           ActiveRecordViews::Extension.create_queue << create_args
