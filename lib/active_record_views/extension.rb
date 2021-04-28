@@ -41,8 +41,8 @@ module ActiveRecordViews
       def refresh_view!(options = {})
         options.assert_valid_keys :concurrent
 
-        concurrent = case options[:concurrent]
-        when nil, false
+        concurrent = case options.fetch(:concurrent, false)
+        when false
           false
         when true
           true

@@ -174,17 +174,17 @@ module ActiveRecordViews
     options.assert_valid_keys :dependencies, :materialized, :unique_columns
     sql = sql.sub(/;\s*\z/, '')
 
-    if options[:materialized]
+    if options.fetch(:materialized, false)
       connection.execute "CREATE MATERIALIZED VIEW #{connection.quote_table_name name} AS #{sql} WITH NO DATA;"
     else
       connection.execute "CREATE VIEW #{connection.quote_table_name name} AS #{sql};"
     end
 
-    if options[:unique_columns]
+    if unique_columns = options.fetch(:unique_columns, nil)
       connection.execute <<-SQL.squish
         CREATE UNIQUE INDEX #{connection.quote_table_name "#{name}_pkey"}
         ON #{connection.quote_table_name name}(
-          #{options[:unique_columns].map { |column_name| connection.quote_table_name(column_name) }.join(', ')}
+          #{unique_columns.map { |column_name| connection.quote_table_name(column_name) }.join(', ')}
         );
       SQL
     end
