@@ -28,9 +28,9 @@ module ActiveRecordViews
     raise "could not find #{name}.sql"
   end
 
-  def self.read_sql_file(sql_path)
+  def self.read_sql_file(model_class, sql_path)
     if sql_path.end_with?('.erb')
-      ERB.new(File.read(sql_path)).result
+      ERB.new(File.read(sql_path)).result(model_class.instance_eval { binding })
     else
       File.read(sql_path)
     end

@@ -32,7 +32,7 @@ describe ActiveRecordViews::Extension do
 
     it 'creates database views from external ERB files' do
       expect(ActiveRecordViews).to receive(:create_view).once.and_call_original
-      expect(ErbTestModel.first.name).to eq 'ERB file'
+      expect(ErbTestModel.first.name).to eq 'ERB method file'
     end
 
     it 'errors if external SQL file is missing' do
@@ -89,13 +89,17 @@ describe ActiveRecordViews::Extension do
       end
 
       sql_file = File.join(TEST_TEMP_MODEL_DIR, 'modified_erb_file_test_model.sql.erb')
-      update_file sql_file, 'foo <%= 2*3*7 %>'
+      update_file sql_file, 'foo <%= test_erb_method %>'
 
       class ModifiedErbFileTestModel < ActiveRecord::Base
+        def self.test_erb_method
+          2 * 3 * 7
+        end
+
         is_view
       end
 
-      update_file sql_file, 'bar <%= 2*3*7 %>'
+      update_file sql_file, 'bar <%= test_erb_method %>'
       test_request
 
       File.unlink sql_file

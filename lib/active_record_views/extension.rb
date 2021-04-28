@@ -33,7 +33,7 @@ module ActiveRecordViews
         sql ||= begin
           sql_path = ActiveRecordViews.find_sql_file(self.name.underscore)
           ActiveRecordViews.register_for_reload self, sql_path
-          ActiveRecordViews.read_sql_file(sql_path)
+          ActiveRecordViews.read_sql_file(self, sql_path)
         end
 
         create_args = [self.table_name, self.name, sql, self.view_options]
