@@ -37,7 +37,9 @@ describe ActiveRecordViews::Extension do
 
     it 'errors if external SQL file is missing' do
       expect {
-        MissingFileTestModel
+        class MissingFileTestModel < ActiveRecord::Base
+          is_view
+        end
       }.to raise_error RuntimeError, /could not find missing_file_test_model.sql/
     end
 
