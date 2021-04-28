@@ -335,4 +335,28 @@ module ActiveRecordViews
       .reject { |name, class_name| Object.const_defined? class_name }
       .each { |name, class_name| ActiveRecordViews.drop_view connection, name }
   end
+
+  def self.reset_materialized_views
+    connection = ActiveRecord::Base.connection
+    ActiveRecordViews::ChecksumCache.new(connection)
+
+    connection.transaction do
+      materialized_views = connection.select_values(<<~SQL)
+        SELECT name
+        FROM active_record_views
+        WHERE (options ->> 'materialized')::boolean
+        AND refreshed_at IS NOT NULL
+      SQL
+
+      materialized_views.each do |view|
+        connection.execute(<<~SQL)
+          REFRESH MATERIALIZED VIEW #{view} WITH NO DATA;
+        SQL
+      end
+
+      connection.execute(<<~SQL)
+        UPDATE active_record_views SET refreshed_at = NULL;
+      SQL
+    end
+  end
 end

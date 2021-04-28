@@ -20,6 +20,28 @@ describe ActiveRecordViews do
       SQL
     end
 
+    def test_view_populated?
+      value = connection.select_value(<<~SQL)
+        SELECT ispopulated
+        FROM pg_matviews
+        WHERE schemaname = 'public' AND matviewname = 'test'
+      SQL
+
+      if Rails::VERSION::MAJOR < 5
+        value = ActiveRecord::ConnectionAdapters::Column::TRUE_VALUES.include?(value)
+      end
+
+      value
+    end
+
+    def test_view_refreshed_at
+      connection.select_value(<<~SQL)
+        SELECT refreshed_at
+        FROM active_record_views
+        WHERE name = 'test'
+      SQL
+    end
+
     def test_materialized_view_sql
       connection.select_value(<<-SQL.squish).try(&:squish)
         SELECT definition
@@ -227,6 +249,19 @@ describe ActiveRecordViews do
       expect {
         create_test_view 'select 1 as foo, 2 as bar, 3 as baz', materialized: false, unique_columns: [:foo, 'bar']
       }.to raise_error ArgumentError, 'unique_columns option requires view to be materialized'
+    end
+
+    it 'supports resetting all materialised views' do
+      class ResetMaterializeViewTestModel < ActiveRecord::Base
+        self.table_name = 'test'
+        is_view 'select 123 as id', materialized: true
+      end
+      ResetMaterializeViewTestModel.refresh_view!
+
+      expect {
+        ActiveRecordViews.reset_materialized_views
+      }.to change { test_view_populated? }.to(false)
+        .and change { test_view_refreshed_at }.to(nil)
     end
   end
 

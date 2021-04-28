@@ -141,6 +141,16 @@ Once you have defined the unique columns for the view, you can then use `concurr
 AccountBalance.refresh_view! concurrent: :auto
 ```
 
+### Resetting all materialised views
+
+If you are using [Database Cleaner](https://github.com/DatabaseCleaner/database_cleaner) in your test suite,
+you probably also want to reset the contents of materialised views for each test run to ensure state
+does not leak between tests. You can do this with the following in your test suite hooks:
+
+```ruby
+ActiveRecordViews.reset_materialized_views
+```
+
 ## Pre-populating views in Rails development mode
 
 Rails loads classes lazily in development mode by default.
