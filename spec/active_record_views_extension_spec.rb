@@ -2,6 +2,19 @@ require 'spec_helper'
 
 describe ActiveRecordViews::Extension do
   describe '.is_view' do
+    def registered_model_class_names
+      ActiveRecordViews.registered_views.map(&:model_class_name)
+    end
+
+    def view_exists?(name)
+      connection = ActiveRecord::Base.connection
+      if connection.respond_to?(:view_exists?)
+        connection.view_exists?(name)
+      else
+        connection.table_exists?(name)
+      end
+    end
+
     it 'creates database views from heredocs' do
       expect(ActiveRecordViews).to receive(:create_view).once.and_call_original
       expect(HeredocTestModel.first.name).to eq 'Here document'
@@ -29,33 +42,38 @@ describe ActiveRecordViews::Extension do
     end
 
     it 'reloads the database view when external SQL file is modified' do
-      %w[foo bar baz].each do |sql|
-        expect(ActiveRecordViews).to receive(:create_view).with(
-          anything,
-          'modified_file_test_models',
-          'ModifiedFileTestModel',
-          sql,
-          {}
-        ).once.ordered
-      end
+      sql_file = File.join(TEST_TEMP_MODEL_DIR, 'modified_file_test_model.sql')
+      update_file sql_file, "SELECT 'foo'::text AS test"
 
-      with_temp_sql_dir do |temp_dir|
-        sql_file = File.join(temp_dir, 'modified_file_test_model.sql')
-        update_file sql_file, 'foo'
-
+      expect {
+        expect(ActiveRecordViews).to receive(:create_view).once.and_call_original
         class ModifiedFileTestModel < ActiveRecord::Base
           is_view
         end
+      }.to change { begin; ModifiedFileTestModel.take!.test; rescue NameError; end }.from(nil).to('foo')
+        .and change { registered_model_class_names.include?('ModifiedFileTestModel') }.from(false).to(true)
 
-        update_file sql_file, 'bar'
+      expect {
+        update_file sql_file, "SELECT 'bar'::text AS test, 42::integer AS test2"
+      }.to_not change { ModifiedFileTestModel.take!.test }
 
+      expect {
+        expect(ActiveRecordViews).to receive(:create_view).once.and_call_original
         test_request
         test_request # second request does not `create_view` again
+      }.to change { ModifiedFileTestModel.take!.test }.to('bar')
+        .and change { ModifiedFileTestModel.column_names }.from(%w[test]).to(%w[test test2])
 
-        update_file sql_file, 'baz'
+      expect {
+        update_file sql_file, "SELECT 'baz'::text AS test"
+      }.to_not change { ModifiedFileTestModel.take!.test }
 
+      expect {
+        expect(ActiveRecordViews).to receive(:create_view).once.and_call_original
         test_request
-      end
+      }.to change { ModifiedFileTestModel.take!.test }.to('baz')
+
+      File.unlink sql_file
       test_request # trigger cleanup
     end
 
@@ -70,40 +88,49 @@ describe ActiveRecordViews::Extension do
         ).once.ordered
       end
 
-      with_temp_sql_dir do |temp_dir|
-        sql_file = File.join(temp_dir, 'modified_erb_file_test_model.sql.erb')
-        update_file sql_file, 'foo <%= 2*3*7 %>'
+      sql_file = File.join(TEST_TEMP_MODEL_DIR, 'modified_erb_file_test_model.sql.erb')
+      update_file sql_file, 'foo <%= 2*3*7 %>'
 
-        class ModifiedErbFileTestModel < ActiveRecord::Base
-          is_view
-        end
-
-        update_file sql_file, 'bar <%= 2*3*7 %>'
-        test_request
+      class ModifiedErbFileTestModel < ActiveRecord::Base
+        is_view
       end
+
+      update_file sql_file, 'bar <%= 2*3*7 %>'
+      test_request
+
+      File.unlink sql_file
       test_request # trigger cleanup
     end
 
     it 'drops the view if the external SQL file is deleted' do
-      with_temp_sql_dir do |temp_dir|
-        sql_file = File.join(temp_dir, 'deleted_file_test_model.sql')
-        File.write sql_file, "SELECT 1 AS id, 'delete test'::text AS name"
+      sql_file = File.join(TEST_TEMP_MODEL_DIR, 'deleted_file_test_model.sql')
+      File.write sql_file, "SELECT 1 AS id, 'delete test'::text AS name"
 
+      rb_file = 'spec/internal/app/models_temp/deleted_file_test_model.rb'
+      File.write rb_file, <<~RB
         class DeletedFileTestModel < ActiveRecord::Base
           is_view
         end
+      RB
 
+      with_reloader do
         expect(DeletedFileTestModel.first.name).to eq 'delete test'
+      end
 
-        File.unlink sql_file
+      File.unlink sql_file
+      File.unlink rb_file
 
-        expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ADROP/).once.and_call_original
+      expect(ActiveRecord::Base.connection).to receive(:execute).with(/\ADROP/).once.and_call_original
+      expect {
         test_request
-        test_request # second request does not `drop_view` again
+      }.to change { registered_model_class_names.include?('DeletedFileTestModel') }.from(true).to(false)
+        .and change { view_exists?('deleted_file_test_models') }.from(true).to(false)
+      test_request # second request does not `drop_view` again
 
+      if Rails::VERSION::MAJOR >= 5
         expect {
           DeletedFileTestModel.first.name
-        }.to raise_error ActiveRecord::StatementInvalid, /relation "deleted_file_test_models" does not exist/
+        }.to raise_error NameError, 'uninitialized constant DeletedFileTestModel'
       end
     end
 
@@ -161,37 +188,34 @@ describe ActiveRecordViews::Extension do
     end
 
     it 'creates/refreshes/drops materialized views' do
-      with_temp_sql_dir do |temp_dir|
-        sql_file = File.join(temp_dir, 'materialized_view_test_model.sql')
-        File.write sql_file, 'SELECT 123 AS id;'
+      sql_file = File.join(TEST_TEMP_MODEL_DIR, 'materialized_view_test_model.sql')
+      File.write sql_file, 'SELECT 123 AS id;'
 
-        class MaterializedViewTestModel < ActiveRecord::Base
-          is_view materialized: true
-        end
-
-        expect {
-          MaterializedViewTestModel.first!
-        }.to raise_error ActiveRecord::StatementInvalid, /materialized view "materialized_view_test_models" has not been populated/
-
-        expect(MaterializedViewTestModel.view_populated?).to eq false
-        expect(MaterializedViewTestModel.refreshed_at).to eq nil
-
-        MaterializedViewTestModel.refresh_view!
-
-        expect(MaterializedViewTestModel.view_populated?).to eq true
-        expect(MaterializedViewTestModel.refreshed_at).to be_a ActiveSupport::TimeWithZone
-        expect(MaterializedViewTestModel.refreshed_at.zone).to eq 'UTC'
-        expect(MaterializedViewTestModel.refreshed_at).to be_within(1.second).of Time.now
-
-        expect(MaterializedViewTestModel.first!.id).to eq 123
-
-        File.unlink sql_file
-        test_request
-
-        expect {
-          MaterializedViewTestModel.first!
-        }.to raise_error ActiveRecord::StatementInvalid, /relation "materialized_view_test_models" does not exist/
+      class MaterializedViewTestModel < ActiveRecord::Base
+        is_view materialized: true
       end
+
+      expect {
+        MaterializedViewTestModel.first!
+      }.to raise_error ActiveRecord::StatementInvalid, /materialized view "materialized_view_test_models" has not been populated/
+
+      expect(MaterializedViewTestModel.view_populated?).to eq false
+      expect(MaterializedViewTestModel.refreshed_at).to eq nil
+
+      MaterializedViewTestModel.refresh_view!
+
+      expect(MaterializedViewTestModel.view_populated?).to eq true
+      expect(MaterializedViewTestModel.refreshed_at).to be_a Time
+      expect(MaterializedViewTestModel.refreshed_at.zone).to eq 'UTC'
+      expect(MaterializedViewTestModel.refreshed_at).to be_within(1.second).of Time.now
+
+      expect(MaterializedViewTestModel.first!.id).to eq 123
+
+      File.unlink sql_file
+
+      expect {
+        test_request
+      }.to change { view_exists?('materialized_view_test_models') }.from(true).to(false)
     end
 
     it 'raises an error for `view_populated?` if view is not materialized' do
@@ -263,7 +287,8 @@ describe ActiveRecordViews::Extension do
         "UPDATE active_record_views SET refreshed_at = current_timestamp AT TIME ZONE 'UTC' WHERE name = 'materialized_view_concurrent_refresh_test_models';",
         'COMMIT',
       ].each do |sql|
-        expect(ActiveRecord::Base.connection).to receive(:execute).with(sql).once.and_call_original
+        extra_args = Gem::Version.new(Rails.version) >= Gem::Version.new("6.1") && %w[BEGIN COMMIT].include?(sql) ? %w[TRANSACTION] : %w[]
+        expect(ActiveRecord::Base.connection).to receive(:execute).with(sql, *extra_args).once.and_call_original
       end
 
       MaterializedViewRefreshTestModel.refresh_view!
@@ -285,7 +310,8 @@ describe ActiveRecordViews::Extension do
         "UPDATE active_record_views SET refreshed_at = current_timestamp AT TIME ZONE 'UTC' WHERE name = 'materialized_view_auto_refresh_test_models';",
         'COMMIT',
       ].each do |sql|
-        expect(ActiveRecord::Base.connection).to receive(:execute).with(sql).once.and_call_original
+        extra_args = Gem::Version.new(Rails.version) >= Gem::Version.new("6.1") && %w[BEGIN COMMIT].include?(sql) ? %w[TRANSACTION] : %w[]
+        expect(ActiveRecord::Base.connection).to receive(:execute).with(sql, *extra_args).once.and_call_original
       end
 
       MaterializedViewAutoRefreshTestModel.refresh_view! concurrent: :auto

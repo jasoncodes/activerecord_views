@@ -320,6 +320,9 @@ module ActiveRecordViews
       if registered_view.stale?
         registered_view.reload!
       end
+      if registered_view.dead?
+        self.registered_views.delete registered_view
+      end
     end
   end
 

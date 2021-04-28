@@ -90,9 +90,11 @@ module ActiveRecordViews
           WHERE name = #{connection.quote self.table_name};
         SQL
 
-        if value
-          ActiveSupport::TimeZone['UTC'].parse(value)
+        if value.is_a? String
+          value = ActiveSupport::TimeZone['UTC'].parse(value)
         end
+
+        value
       end
 
       def ensure_populated!

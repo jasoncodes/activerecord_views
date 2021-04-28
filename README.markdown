@@ -23,7 +23,7 @@ gem 'activerecord_views'
 app/models/account.rb:
 
 ```ruby
-class Account < ActiveRecord::Base
+class Account < ApplicationRecord
   has_many :transactions
 
   has_one :account_balance
@@ -34,7 +34,7 @@ end
 app/models/transaction.rb:
 
 ```ruby
-class Transaction < ActiveRecord::Base
+class Transaction < ApplicationRecord
   belongs_to :account
 end
 ```
@@ -42,7 +42,7 @@ end
 app/models/account_balance.rb:
 
 ```ruby
-class AccountBalance < ActiveRecord::Base
+class AccountBalance < ApplicationRecord
   is_view
 
   belongs_to :account
@@ -88,11 +88,11 @@ a safety check which will require you to specify the dependency explicitly if yo
 to another view model:
 
 ```ruby
-class AccountBalance < ActiveRecord::Base
+class AccountBalance < ApplicationRecord
   is_view
 end
 
-class AccountSummary < ActiveRecord::Base
+class AccountSummary < ApplicationRecord
   is_view dependencies: [AccountBalance]
 end
 ```
@@ -106,7 +106,7 @@ Materialized views let you cache the output of views. This is useful for views w
 To configure an ActiveRecordViews model as being materialized, pass the `materialized: true` option to `is_view`:
 
 ```ruby
-class AccountBalance < ActiveRecord::Base
+class AccountBalance < ApplicationRecord
   is_view materialized: true
 end
 ```
@@ -128,7 +128,7 @@ ActiveRecordViews also has a convenience method called `ensure_populated!` which
 PostgreSQL 9.4 supports refreshing materialized views concurrently. This allows other processes to continue reading old cached data while the view is being updated. To use this feature you must have define a unique index on the materialized view:
 
 ```ruby
-class AccountBalance < ActiveRecord::Base
+class AccountBalance < ApplicationRecord
   is_view materialized: true, unique_columns: %w[account_id]
 end
 ```

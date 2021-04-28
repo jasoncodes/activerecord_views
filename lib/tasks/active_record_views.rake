@@ -6,29 +6,54 @@ Rake::Task['db:migrate'].enhance do
   end
 end
 
-Rake::Task['db:structure:dump'].enhance do
+schema_rake_task = Gem::Version.new(Rails.version) >= Gem::Version.new("6.1") ? 'db:schema:dump' : 'db:structure:dump'
+
+Rake::Task[schema_rake_task].enhance do
   table_exists = if Rails::VERSION::MAJOR >= 5
     ActiveRecord::Base.connection.data_source_exists?('active_record_views')
   else
     ActiveRecord::Base.connection.table_exists?('active_record_views')
   end
 
-  if table_exists
-    filename = ENV['DB_STRUCTURE'] || File.join(Rails.root, "db", "structure.sql")
+  if schema_rake_task == 'db:structure:dump'
+    ActiveRecord::Base.schema_format = :sql
+  end
 
-    if defined? ActiveRecord::Tasks::DatabaseTasks
-      tasks = ActiveRecord::Tasks::DatabaseTasks
-      config = tasks.current_config
-      tasks.send(:class_for_adapter, config.fetch('adapter')).new(config)
-      pg_tasks = tasks.send(:class_for_adapter, config.fetch('adapter')).new(config)
-      pg_tasks.send(:set_psql_env)
+  if table_exists && ActiveRecord::Base.schema_format == :sql
+    tasks = ActiveRecord::Tasks::DatabaseTasks
+
+    filename = case
+    when tasks.respond_to?(:dump_filename)
+      tasks.dump_filename('primary')
     else
-      config = current_config
-      set_psql_env(config)
+      tasks.schema_file
     end
 
+    config = if ActiveRecord::Base.configurations.respond_to?(:configs_for)
+      if Rails.version.start_with?('6.0.')
+        ActiveRecord::Base.configurations.configs_for(env_name: Rails.env, spec_name: 'primary').config
+      else
+        ActiveRecord::Base.configurations.configs_for(env_name: Rails.env, name: 'primary')
+      end
+    else
+      tasks.current_config
+    end
+    adapter = if config.respond_to?(:adapter)
+      config.adapter
+    else
+      config.fetch('adapter')
+    end
+    database = if config.respond_to?(:database)
+      config.database
+    else
+      config.fetch('database')
+    end
+
+    pg_tasks = tasks.send(:class_for_adapter, adapter).new(config)
+    pg_tasks.send(:set_psql_env)
+
     require 'shellwords'
-    system("pg_dump --data-only --table=active_record_views #{Shellwords.escape config['database']} >> #{Shellwords.escape filename}")
+    system("pg_dump --data-only --table=active_record_views #{Shellwords.escape database} >> #{Shellwords.escape filename}")
     raise 'active_record_views metadata dump failed' unless $?.success?
 
     File.open filename, 'a' do |io|

@@ -1,6 +1,6 @@
 module ActiveRecordViews
   class RegisteredView
-    attr_reader :sql_path
+    attr_reader :model_class_name, :sql_path
 
     def initialize(model_class, sql_path)
       @model_class_name = model_class.name
@@ -16,9 +16,14 @@ module ActiveRecordViews
       sql_timestamp != @cached_sql_timestamp
     end
 
+    def dead?
+      !File.exist?(sql_path)
+    end
+
     def reload!
       if File.exist? sql_path
         ActiveRecordViews.create_view model_class.connection, model_class.table_name, model_class.name, ActiveRecordViews.read_sql_file(sql_path), model_class.view_options
+        model_class.reset_column_information
       else
         ActiveRecordViews.drop_view model_class.connection, model_class.table_name
       end
