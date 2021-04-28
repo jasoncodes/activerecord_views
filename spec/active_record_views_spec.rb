@@ -230,6 +230,15 @@ describe ActiveRecordViews do
     end
   end
 
+  describe '.drop_all_views' do
+    let(:connection) { ActiveRecord::Base.connection }
+
+    it 'does nothing when no views have been defined' do
+      ActiveRecordViews.drop_all_views connection
+      expect(view_names).to match_array %w[]
+    end
+  end
+
   describe '.without_transaction' do
     let(:original_connection) { ActiveRecord::Base.connection }
 

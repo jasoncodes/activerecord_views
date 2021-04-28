@@ -154,6 +154,7 @@ module ActiveRecordViews
 
   def self.drop_all_views(base_connection)
     without_transaction base_connection do |connection|
+      ActiveRecordViews::ChecksumCache.new(connection)
       names = Set.new connection.select_values('SELECT name FROM active_record_views;')
 
       func = lambda do |name|
