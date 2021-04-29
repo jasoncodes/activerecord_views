@@ -20,7 +20,7 @@ module ActiveRecordViews
 
   def self.find_sql_file(name)
     self.sql_load_path.each do |dir|
-      path = "#{dir}/#{name}.sql"
+      path = "#{dir}/views/#{name}.sql"
       return path if File.exist?(path)
       path = path + '.erb'
       return path if File.exist?(path)
@@ -70,7 +70,7 @@ module ActiveRecordViews
 
   def self.create_view(base_connection, name, class_name, sql, options = {})
     options = options.dup
-    options.assert_valid_keys :dependencies, :materialized, :unique_columns
+    options.assert_valid_keys :dependencies, :materialized, :unique_columns, :indexes
     options[:dependencies] = parse_dependencies(options[:dependencies])
 
     without_transaction base_connection do |connection|
@@ -171,13 +171,24 @@ module ActiveRecordViews
   end
 
   def self.execute_create_view(connection, name, sql, options)
-    options.assert_valid_keys :dependencies, :materialized, :unique_columns
+    options.assert_valid_keys :dependencies, :materialized, :unique_columns, :indexes
     sql = sql.sub(/;\s*\z/, '')
 
     if options[:materialized]
       connection.execute "CREATE MATERIALIZED VIEW #{connection.quote_table_name name} AS #{sql} WITH NO DATA;"
     else
       connection.execute "CREATE VIEW #{connection.quote_table_name name} AS #{sql};"
+    end
+
+    if options[:indexes]
+      options[:indexes].map { |column_name|
+        connection.execute <<-SQL.squish
+          CREATE INDEX #{connection.quote_table_name "#{name}_#{column_name}_index"}
+          ON #{connection.quote_table_name name} (
+            #{connection.quote_table_name(column_name)}
+          )
+        SQL
+      }
     end
 
     if options[:unique_columns]
