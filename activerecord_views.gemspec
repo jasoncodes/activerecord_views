@@ -21,6 +21,7 @@ Gem::Specification.new do |gem|
 
   gem.add_development_dependency 'appraisal'
   gem.add_development_dependency 'rspec-rails', '>= 2.14'
+  gem.add_development_dependency 'super_diff'
   gem.add_development_dependency 'combustion', '>= 0.5.1'
   gem.add_development_dependency 'pg'
   gem.add_development_dependency 'warning'
