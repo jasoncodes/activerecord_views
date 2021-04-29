@@ -283,7 +283,12 @@ describe ActiveRecordViews::Extension do
       end
       MaterializedViewConcurrentRefreshTestModel.refresh_view!
 
-      [
+      sql_statements.clear
+
+      MaterializedViewRefreshTestModel.refresh_view!
+      MaterializedViewConcurrentRefreshTestModel.refresh_view! concurrent: true
+
+      expect(sql_statements).to eq [
         'BEGIN',
         'REFRESH MATERIALIZED VIEW "materialized_view_refresh_test_models";',
         "UPDATE active_record_views SET refreshed_at = current_timestamp AT TIME ZONE 'UTC' WHERE name = 'materialized_view_refresh_test_models';",
@@ -292,13 +297,7 @@ describe ActiveRecordViews::Extension do
         'REFRESH MATERIALIZED VIEW CONCURRENTLY "materialized_view_concurrent_refresh_test_models";',
         "UPDATE active_record_views SET refreshed_at = current_timestamp AT TIME ZONE 'UTC' WHERE name = 'materialized_view_concurrent_refresh_test_models';",
         'COMMIT',
-      ].each do |sql|
-        extra_args = Gem::Version.new(Rails.version) >= Gem::Version.new("6.1") && %w[BEGIN COMMIT].include?(sql) ? %w[TRANSACTION] : %w[]
-        expect(ActiveRecord::Base.connection).to receive(:execute).with(sql, *extra_args).once.and_call_original
-      end
-
-      MaterializedViewRefreshTestModel.refresh_view!
-      MaterializedViewConcurrentRefreshTestModel.refresh_view! concurrent: true
+      ]
     end
 
     it 'supports opportunistically refreshing materialized views concurrently' do
@@ -306,7 +305,12 @@ describe ActiveRecordViews::Extension do
         is_view 'SELECT 1 AS id;', materialized: true, unique_columns: [:id]
       end
 
-      [
+      sql_statements.clear
+
+      MaterializedViewAutoRefreshTestModel.refresh_view! concurrent: :auto
+      MaterializedViewAutoRefreshTestModel.refresh_view! concurrent: :auto
+
+      expect(sql_statements.grep_v(/^SELECT/)).to eq [
         'BEGIN',
         'REFRESH MATERIALIZED VIEW "materialized_view_auto_refresh_test_models";',
         "UPDATE active_record_views SET refreshed_at = current_timestamp AT TIME ZONE 'UTC' WHERE name = 'materialized_view_auto_refresh_test_models';",
@@ -315,13 +319,7 @@ describe ActiveRecordViews::Extension do
         'REFRESH MATERIALIZED VIEW CONCURRENTLY "materialized_view_auto_refresh_test_models";',
         "UPDATE active_record_views SET refreshed_at = current_timestamp AT TIME ZONE 'UTC' WHERE name = 'materialized_view_auto_refresh_test_models';",
         'COMMIT',
-      ].each do |sql|
-        extra_args = Gem::Version.new(Rails.version) >= Gem::Version.new("6.1") && %w[BEGIN COMMIT].include?(sql) ? %w[TRANSACTION] : %w[]
-        expect(ActiveRecord::Base.connection).to receive(:execute).with(sql, *extra_args).once.and_call_original
-      end
-
-      MaterializedViewAutoRefreshTestModel.refresh_view! concurrent: :auto
-      MaterializedViewAutoRefreshTestModel.refresh_view! concurrent: :auto
+      ]
     end
 
     it 'raises an error when refreshing materialized views with invalid concurrent option' do
