@@ -21,6 +21,20 @@ Combustion.initialize! :active_record, :action_controller do
 end
 require 'rspec/rails'
 
+RSpec.shared_context 'sql_statements' do
+  let(:sql_statements) { [] }
+
+  let!(:sql_statements_subscription) do
+    ActiveSupport::Notifications.subscribe('sql.active_record') do |_, _, _, _, details|
+      sql_statements << details.fetch(:sql)
+    end
+  end
+
+  after do
+    ActiveSupport::Notifications.unsubscribe sql_statements_subscription
+  end
+end
+
 RSpec.configure do |config|
   config.use_transactional_fixtures = false
   config.filter_run_when_matching focus: true
@@ -64,6 +78,8 @@ RSpec.configure do |config|
       connection.execute "DROP MATERIALIZED VIEW IF EXISTS #{connection.quote_table_name view_name} CASCADE"
     end
   end
+
+  config.include_context 'sql_statements'
 end
 
 def with_reloader(&block)
