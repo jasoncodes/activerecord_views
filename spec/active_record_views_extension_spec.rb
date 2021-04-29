@@ -293,6 +293,7 @@ describe ActiveRecordViews::Extension do
         'REFRESH MATERIALIZED VIEW "materialized_view_refresh_test_models";',
         "UPDATE active_record_views SET refreshed_at = current_timestamp AT TIME ZONE 'UTC' WHERE name = 'materialized_view_refresh_test_models';",
         'COMMIT',
+
         'BEGIN',
         'REFRESH MATERIALIZED VIEW CONCURRENTLY "materialized_view_concurrent_refresh_test_models";',
         "UPDATE active_record_views SET refreshed_at = current_timestamp AT TIME ZONE 'UTC' WHERE name = 'materialized_view_concurrent_refresh_test_models';",
@@ -315,6 +316,7 @@ describe ActiveRecordViews::Extension do
         'REFRESH MATERIALIZED VIEW "materialized_view_auto_refresh_test_models";',
         "UPDATE active_record_views SET refreshed_at = current_timestamp AT TIME ZONE 'UTC' WHERE name = 'materialized_view_auto_refresh_test_models';",
         'COMMIT',
+
         'BEGIN',
         'REFRESH MATERIALIZED VIEW CONCURRENTLY "materialized_view_auto_refresh_test_models";',
         "UPDATE active_record_views SET refreshed_at = current_timestamp AT TIME ZONE 'UTC' WHERE name = 'materialized_view_auto_refresh_test_models';",
