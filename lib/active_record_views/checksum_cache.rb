@@ -13,12 +13,13 @@ module ActiveRecordViews
       end
 
       if table_exists && !@connection.column_exists?('active_record_views', 'class_name')
-        @connection.transaction :requires_new => true do
-          @connection.select_values('SELECT name FROM active_record_views;').each do |view_name|
-            @connection.execute "DROP VIEW IF EXISTS #{view_name} CASCADE;"
-          end
-          @connection.execute 'DROP TABLE active_record_views;'
+        @connection.begin_transaction
+        in_transaction = true
+
+        @connection.select_values('SELECT name FROM active_record_views;').each do |view_name|
+          @connection.execute "DROP VIEW IF EXISTS #{view_name} CASCADE;"
         end
+        @connection.execute 'DROP TABLE active_record_views;'
         table_exists = false
       end
 
@@ -33,6 +34,9 @@ module ActiveRecordViews
       unless table_exists
         @connection.execute "CREATE TABLE active_record_views(name text PRIMARY KEY, class_name text NOT NULL UNIQUE, checksum text NOT NULL, options json NOT NULL DEFAULT '{}', refreshed_at timestamp);"
       end
+
+    ensure
+      @connection.commit_transaction if in_transaction
     end
 
     def get(name)

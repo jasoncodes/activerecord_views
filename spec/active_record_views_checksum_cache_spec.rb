@@ -61,8 +61,8 @@ describe ActiveRecordViews::ChecksumCache do
           'BEGIN',
           'DROP VIEW IF EXISTS test_view CASCADE;',
           'DROP TABLE active_record_views;',
-          'COMMIT',
           /^CREATE TABLE active_record_views/,
+          'COMMIT',
         ]
 
         expect(connection.column_exists?('active_record_views', 'class_name')).to eq true
