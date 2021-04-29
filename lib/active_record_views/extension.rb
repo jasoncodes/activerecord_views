@@ -41,13 +41,13 @@ module ActiveRecordViews
       def refresh_view!(options = {})
         options.assert_valid_keys :concurrent
 
-        concurrent = case options.fetch(:concurrent, false)
+        concurrent = case options.fetch(:concurrent, :auto)
         when false
           false
         when true
           true
         when :auto
-          view_populated? && ActiveRecordViews.supports_concurrent_refresh?(connection)
+          view_options.fetch(:unique_columns, nil) && view_populated? && ActiveRecordViews.supports_concurrent_refresh?(connection)
         else
           raise ArgumentError, 'invalid concurrent option'
         end

@@ -135,10 +135,10 @@ end
 
 Note: If your view has a single column as the unique key, you can also tell ActiveRecord about it by adding `self.primary_key = :account_id` in your model file. This is required for features such as `.find` and `.find_each` to work.
 
-Once you have defined the unique columns for the view, you can then use `concurrent: true` to force a concurrent refresh or `concurrent: :auto` to concurrently refresh when possible:
+Once you have defined the unique columns for the view, ActiveRecordViews will automatically start refreshing concurrently when you call `refresh_view!`. If you wish to force a non-concurrent refresh, which is typically faster but blocks reads while the view is refreshing, you can then use the `concurrent: false` option:
 
 ```ruby
-AccountBalance.refresh_view! concurrent: :auto
+AccountBalance.refresh_view! concurrent: false
 ```
 
 ### Resetting all materialised views
