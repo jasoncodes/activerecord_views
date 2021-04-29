@@ -281,6 +281,7 @@ describe ActiveRecordViews::Extension do
       class MaterializedViewConcurrentRefreshTestModel < ActiveRecord::Base
         is_view 'SELECT 1 AS id;', materialized: true, unique_columns: [:id]
       end
+      MaterializedViewRefreshTestModel.refresh_view!
       MaterializedViewConcurrentRefreshTestModel.refresh_view!
 
       sql_statements.clear
