@@ -53,7 +53,7 @@ Rake::Task[schema_rake_task].enhance do
     pg_tasks.send(:set_psql_env)
 
     require 'shellwords'
-    system("pg_dump --data-only --table=active_record_views #{Shellwords.escape database} >> #{Shellwords.escape filename}")
+    system("pg_dump --data-only --no-owner --table=active_record_views #{Shellwords.escape database} >> #{Shellwords.escape filename}")
     raise 'active_record_views metadata dump failed' unless $?.success?
 
     File.open filename, 'a' do |io|
