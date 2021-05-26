@@ -52,14 +52,14 @@ Rake::Task[schema_rake_task].enhance do
     pg_tasks = tasks.send(:class_for_adapter, adapter).new(config)
     pg_tasks.send(:set_psql_env)
 
-    require 'shellwords'
-    active_record_views_dump = Tempfile.open("active_record_views_dump.sql")
-    system("pg_dump --data-only --no-owner --table=active_record_views #{Shellwords.escape database} >> #{Shellwords.escape active_record_views_dump.path}")
-    raise 'active_record_views metadata dump failed' unless $?.success?
-
-    ActiveRecordViews::RakeTaskUtilities.remove_sql_header_comments(active_record_views_dump.path)
-
     begin
+      active_record_views_dump = Tempfile.open("active_record_views_dump.sql")
+      require 'shellwords'
+      system("pg_dump --data-only --no-owner --table=active_record_views #{Shellwords.escape database} >> #{Shellwords.escape active_record_views_dump.path}")
+      raise 'active_record_views metadata dump failed' unless $?.success?
+
+      ActiveRecordViews::RakeTaskUtilities.remove_sql_header_comments(active_record_views_dump.path)
+
       File.open filename, 'a' do |io|
         File.foreach(active_record_views_dump.path) do |line|
           io.puts line
