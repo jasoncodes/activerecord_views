@@ -58,7 +58,9 @@ Rake::Task[schema_rake_task].enhance do
       system("pg_dump --data-only --no-owner --table=active_record_views #{Shellwords.escape database} >> #{Shellwords.escape active_record_views_dump.path}")
       raise 'active_record_views metadata dump failed' unless $?.success?
 
-      ActiveRecordViews::RakeTaskUtilities.remove_sql_header_comments(active_record_views_dump.path)
+      if Gem::Version.new(Rails.version) >= Gem::Version.new("5.1")
+        pg_tasks.send(:remove_sql_header_comments, active_record_views_dump.path)
+      end
 
       File.open filename, 'a' do |io|
         File.foreach(active_record_views_dump.path) do |line|
@@ -69,29 +71,6 @@ Rake::Task[schema_rake_task].enhance do
       end
     ensure
       active_record_views_dump.unlink
-    end
-  end
-end
-
-module ActiveRecordViews
-  module RakeTaskUtilities
-    SQL_COMMENT_BEGIN = "--".freeze
-
-    # https://github.com/rails/rails/blob/93e7343db41156c6c90261754129fc0446515a09/activerecord/lib/active_record/tasks/postgresql_database_tasks.rb#L121-L134
-    def self.remove_sql_header_comments(filename)
-      removing_comments = true
-      tempfile = Tempfile.open("uncommented_structure.sql")
-      begin
-        File.foreach(filename) do |line|
-          unless removing_comments && (line.start_with?(SQL_COMMENT_BEGIN) || line.blank?)
-            tempfile << line
-            removing_comments = false
-          end
-        end
-      ensure
-        tempfile.close
-      end
-      FileUtils.cp(tempfile.path, filename)
     end
   end
 end
