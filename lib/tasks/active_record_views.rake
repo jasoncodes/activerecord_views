@@ -70,6 +70,7 @@ Rake::Task[schema_rake_task].enhance do
         io.puts 'UPDATE public.active_record_views SET refreshed_at = NULL WHERE refreshed_at IS NOT NULL;'
       end
     ensure
+      active_record_views_dump.close
       active_record_views_dump.unlink
     end
   end
