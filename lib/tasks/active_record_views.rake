@@ -52,12 +52,26 @@ Rake::Task[schema_rake_task].enhance do
     pg_tasks = tasks.send(:class_for_adapter, adapter).new(config)
     pg_tasks.send(:set_psql_env)
 
-    require 'shellwords'
-    system("pg_dump --data-only --table=active_record_views #{Shellwords.escape database} >> #{Shellwords.escape filename}")
-    raise 'active_record_views metadata dump failed' unless $?.success?
+    begin
+      active_record_views_dump = Tempfile.open("active_record_views_dump.sql")
+      require 'shellwords'
+      system("pg_dump --data-only --no-owner --table=active_record_views #{Shellwords.escape database} >> #{Shellwords.escape active_record_views_dump.path}")
+      raise 'active_record_views metadata dump failed' unless $?.success?
 
-    File.open filename, 'a' do |io|
-      io.puts 'UPDATE public.active_record_views SET refreshed_at = NULL WHERE refreshed_at IS NOT NULL;'
+      if Gem::Version.new(Rails.version) >= Gem::Version.new("5.1")
+        pg_tasks.send(:remove_sql_header_comments, active_record_views_dump.path)
+      end
+
+      File.open filename, 'a' do |io|
+        # Seek to the end to ensure we don't overwrite the existing content
+        io.seek(0, IO::SEEK_END)
+        IO.copy_stream active_record_views_dump, io
+
+        io.puts 'UPDATE public.active_record_views SET refreshed_at = NULL WHERE refreshed_at IS NOT NULL;'
+      end
+    ensure
+      active_record_views_dump.close
+      active_record_views_dump.unlink
     end
   end
 end
