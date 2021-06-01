@@ -63,9 +63,9 @@ Rake::Task[schema_rake_task].enhance do
       end
 
       File.open filename, 'a' do |io|
-        File.foreach(active_record_views_dump.path) do |line|
-          io.puts line
-        end
+        # Seek to the end to ensure we don't overwrite the existing content
+        io.seek(0, IO::SEEK_END)
+        IO.copy_stream active_record_views_dump, io
 
         io.puts 'UPDATE public.active_record_views SET refreshed_at = NULL WHERE refreshed_at IS NOT NULL;'
       end
