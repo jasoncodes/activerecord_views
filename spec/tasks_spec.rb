@@ -79,8 +79,25 @@ describe 'rake tasks' do
       sql = File.read('spec/internal/db/structure.sql')
       expect(sql).to match(/CREATE TABLE public\.schema_migrations/)
       expect(sql).to match(/CREATE VIEW public\.test_view/)
-      expect(sql).to match(/COPY public\.active_record_views.+test_view\tTestView/m)
-      expect(sql).to match(/UPDATE public\.active_record_views SET refreshed_at = NULL/)
+      expect(sql).to match(/COPY public\.active_record_views.+test_view\tTestView\t.*\t.*\t\\N$/m)
+    end
+
+    it 'clears refreshed_at values' do
+      ActiveRecord::Base.connection.execute "UPDATE active_record_views SET refreshed_at = current_timestamp AT TIME ZONE 'UTC' WHERE name = 'test_view';"
+
+      rake schema_rake_task
+
+      ActiveRecord::Base.clear_all_connections!
+
+      system 'dropdb activerecord_views_test'
+      raise unless $?.success?
+      system 'createdb activerecord_views_test'
+      raise unless $?.success?
+      system 'psql -X -q -o /dev/null -f spec/internal/db/structure.sql activerecord_views_test'
+      raise unless $?.success?
+
+      refreshed_ats = ActiveRecord::Base.connection.select_values("SELECT refreshed_at FROM active_record_views WHERE name = 'test_view'")
+      expect(refreshed_ats).to eq [nil]
     end
 
     it 'does not write structure.sql when `schema_format = :ruby`', if: schema_rake_task != 'db:structure:dump' do
