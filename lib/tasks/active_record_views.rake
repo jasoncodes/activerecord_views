@@ -76,6 +76,9 @@ Rake::Task[schema_rake_task].enhance do
       #     test_view       TestView        42364a017b73ef516a0eca9827e6fa00623257ee        {"dependencies":[]}     \N
       #     \.
       active_record_views_dump_content = active_record_views_dump.read
+      if active_record_views_dump_content !~ /^COPY public.active_record_views \(.+, refreshed_at\) FROM stdin;$/
+        raise 'refreshed_at is not final column'
+      end
       active_record_views_dump_content.gsub!(/\t\d\d\d\d-\d\d-\d\d.*$/, "\t\\N")
 
       File.open filename, 'a' do |io|
