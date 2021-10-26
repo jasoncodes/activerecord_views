@@ -62,12 +62,24 @@ Rake::Task[schema_rake_task].enhance do
         pg_tasks.send(:remove_sql_header_comments, active_record_views_dump.path)
       end
 
-      File.open filename, 'a' do |io|
-        # Seek to the end to ensure we don't overwrite the existing content
-        io.seek(0, IO::SEEK_END)
-        IO.copy_stream active_record_views_dump, io
+      # Substitute out any timestamps that were dumped from the active_record_views table
+      #
+      # Before:
+      #
+      #     COPY public.active_record_views (name, class_name, checksum, options, refreshed_at) FROM stdin;
+      #     test_view       TestView        42364a017b73ef516a0eca9827e6fa00623257ee        {"dependencies":[]}     2021-10-26 02:49:12.247494
+      #     \.
+      #
+      # After:
+      #
+      #     COPY public.active_record_views (name, class_name, checksum, options, refreshed_at) FROM stdin;
+      #     test_view       TestView        42364a017b73ef516a0eca9827e6fa00623257ee        {"dependencies":[]}     \N
+      #     \.
+      active_record_views_dump_content = active_record_views_dump.read
+      active_record_views_dump_content.gsub!(/\t\d\d\d\d-\d\d-\d\d.*$/, "\t\\N")
 
-        io.puts 'UPDATE public.active_record_views SET refreshed_at = NULL WHERE refreshed_at IS NOT NULL;'
+      File.open filename, 'a' do |io|
+        io.puts active_record_views_dump_content
       end
     ensure
       active_record_views_dump.close
