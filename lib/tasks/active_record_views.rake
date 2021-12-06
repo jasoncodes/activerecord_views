@@ -9,11 +9,7 @@ end
 schema_rake_task = Gem::Version.new(Rails.version) >= Gem::Version.new("6.1") ? 'db:schema:dump' : 'db:structure:dump'
 
 Rake::Task[schema_rake_task].enhance do
-  table_exists = if Rails::VERSION::MAJOR >= 5
-    ActiveRecord::Base.connection.data_source_exists?('active_record_views')
-  else
-    ActiveRecord::Base.connection.table_exists?('active_record_views')
-  end
+  table_exists = ActiveRecord::Base.connection.data_source_exists?('active_record_views')
 
   if schema_rake_task == 'db:structure:dump'
     ActiveRecord::Base.schema_format = :sql

@@ -8,11 +8,7 @@ describe ActiveRecordViews::Extension do
 
     def view_exists?(name)
       connection = ActiveRecord::Base.connection
-      if connection.respond_to?(:view_exists?)
-        connection.view_exists?(name)
-      else
-        connection.table_exists?(name)
-      end
+      connection.view_exists?(name)
     end
 
     it 'creates database views from heredocs' do
@@ -119,7 +115,7 @@ describe ActiveRecordViews::Extension do
         end
       RB
 
-      with_reloader do
+      Rails.application.reloader.wrap do
         expect(DeletedFileTestModel.first.name).to eq 'delete test'
       end
 
@@ -133,11 +129,9 @@ describe ActiveRecordViews::Extension do
         .and change { view_exists?('deleted_file_test_models') }.from(true).to(false)
       test_request # second request does not `drop_view` again
 
-      if Rails::VERSION::MAJOR >= 5
-        expect {
-          DeletedFileTestModel.first.name
-        }.to raise_error NameError, 'uninitialized constant DeletedFileTestModel'
-      end
+      expect {
+        DeletedFileTestModel.first.name
+      }.to raise_error NameError, 'uninitialized constant DeletedFileTestModel'
     end
 
     it 'does not create if database view is initially up to date' do

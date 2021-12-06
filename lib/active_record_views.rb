@@ -37,18 +37,12 @@ module ActiveRecordViews
   end
 
   def self.without_transaction(connection)
-    in_transaction = if connection.respond_to? :transaction_open?
-      connection.transaction_open?
-    else
-      !connection.outside_transaction?
-    end
-
     states = Thread.current[:active_record_views_without_transaction] ||= {}
 
     begin
       if states[connection]
         yield states[connection]
-      elsif in_transaction
+      elsif connection.transaction_open?
         begin
           temp_connection = connection.pool.checkout
           states[temp_connection] = states[connection] = temp_connection

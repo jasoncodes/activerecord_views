@@ -70,10 +70,6 @@ module ActiveRecordViews
           raise ArgumentError, 'not a materialized view'
         end
 
-        if Rails::VERSION::MAJOR < 5
-          value = ActiveRecord::ConnectionAdapters::Column::TRUE_VALUES.include?(value)
-        end
-
         value
       end
 

@@ -5,11 +5,7 @@ describe ActiveRecordViews::ChecksumCache do
 
   describe 'initialisation' do
     def metadata_table_exists?
-      if Rails::VERSION::MAJOR >= 5
-        connection.data_source_exists?('active_record_views')
-      else
-        connection.table_exists?('active_record_views')
-      end
+      connection.data_source_exists?('active_record_views')
     end
 
     context 'no existing table' do

@@ -8,19 +8,11 @@ module ActiveRecordViews
       end
 
       unless app.config.cache_classes
-        if app.respond_to?(:reloader)
-          app.reloader.before_class_unload do
-            ActiveRecordViews.reload_stale_views!
-          end
-          app.executor.to_run do
-            ActiveRecordViews.reload_stale_views!
-          end
-        else
-          ActiveSupport.on_load :action_controller do
-            ActionDispatch::Callbacks.before do
-              ActiveRecordViews.reload_stale_views!
-            end
-          end
+        app.reloader.before_class_unload do
+          ActiveRecordViews.reload_stale_views!
+        end
+        app.executor.to_run do
+          ActiveRecordViews.reload_stale_views!
         end
       end
     end

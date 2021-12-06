@@ -2,12 +2,6 @@ require 'warning'
 require 'rails/version'
 
 case Rails::VERSION::STRING
-when /^4\.2\./
-  Warning.ignore(%r{lib/(active_support/core_ext|action_dispatch/middleware)/.+: warning: (method redefined|previous definition)})
-  Warning.ignore(%r{lib/active_support/core_ext/.+: warning: BigDecimal.new is deprecated})
-  Warning.ignore(%r{lib/arel/visitors/informix.rb:\d+: warning: assigned but unused variable})
-  Warning.ignore(%r{lib/active_record/connection_adapters/.+: warning: deprecated Object#=~ is called on Integer})
-  Warning.ignore(%r{Inheriting from Rack::Session::Abstract::ID is deprecated})
 when /^5\.0\./
   Warning.ignore(%r{lib/(active_support/core_ext|action_view)/.+: warning: (method redefined|previous definition)})
   Warning.ignore(%r{lib/arel/visitors/informix.rb:\d+: warning: assigned but unused variable})

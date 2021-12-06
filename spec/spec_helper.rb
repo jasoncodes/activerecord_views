@@ -50,12 +50,7 @@ RSpec.configure do |config|
   config.before do
     FileUtils.rm_rf Dir["spec/internal/app/models_temp/*"]
 
-    if Rails::VERSION::MAJOR >= 5
-      Rails.application.reloader.reload!
-    else
-      ActionDispatch::Reloader.cleanup!
-      ActionDispatch::Reloader.prepare!
-    end
+    Rails.application.reloader.reload!
 
     connection = ActiveRecord::Base.connection
 
@@ -83,16 +78,8 @@ RSpec.configure do |config|
   config.include_context 'sql_statements'
 end
 
-def with_reloader(&block)
-  if Rails.application.respond_to?(:reloader)
-    Rails.application.reloader.wrap(&block)
-  else
-    block.call
-  end
-end
-
 def test_request
-  with_reloader do
+  Rails.application.reloader.wrap do
     status, headers, body = Rails.application.call(
       'REQUEST_METHOD' => 'GET',
       'PATH_INFO' => '/',

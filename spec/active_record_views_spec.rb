@@ -27,10 +27,6 @@ describe ActiveRecordViews do
         WHERE schemaname = 'public' AND matviewname = 'test'
       SQL
 
-      if Rails::VERSION::MAJOR < 5
-        value = ActiveRecord::ConnectionAdapters::Column::TRUE_VALUES.include?(value)
-      end
-
       value
     end
 
