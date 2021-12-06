@@ -54,9 +54,7 @@ Rake::Task[schema_rake_task].enhance do
       system("pg_dump --data-only --no-owner --table=active_record_views #{Shellwords.escape database} >> #{Shellwords.escape active_record_views_dump.path}")
       raise 'active_record_views metadata dump failed' unless $?.success?
 
-      if Gem::Version.new(Rails.version) >= Gem::Version.new("5.1")
-        pg_tasks.send(:remove_sql_header_comments, active_record_views_dump.path)
-      end
+      pg_tasks.send(:remove_sql_header_comments, active_record_views_dump.path)
 
       # Substitute out any timestamps that were dumped from the active_record_views table
       #
