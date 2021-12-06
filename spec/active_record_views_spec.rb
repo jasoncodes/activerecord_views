@@ -333,5 +333,16 @@ describe ActiveRecordViews do
         original_connection.pool.checkin original_connection_2
       end
     end
+
+    it 'does not attempt to checkin when checkout fails' do
+      expect(original_connection.pool).to receive(:checkout).and_raise PG::ConnectionBad
+      expect(original_connection.pool).to_not receive(:checkin)
+
+      expect {
+        original_connection.transaction do
+          ActiveRecordViews.without_transaction(original_connection) { }
+        end
+      }.to raise_error PG::ConnectionBad
+    end
   end
 end

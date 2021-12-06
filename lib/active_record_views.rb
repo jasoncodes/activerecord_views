@@ -54,7 +54,7 @@ module ActiveRecordViews
           states[temp_connection] = states[connection] = temp_connection
           yield temp_connection
         ensure
-          connection.pool.checkin temp_connection
+          connection.pool.checkin temp_connection if temp_connection
           states[temp_connection] = states[connection] = nil
         end
       else
