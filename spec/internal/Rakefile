@@ -12,6 +12,9 @@ Combustion.initialize! :active_record, :action_controller do
   config.cache_classes = false
   config.log_level = :debug
   config.active_record.schema_format = ENV.fetch('SCHEMA_FORMAT', 'sql').to_sym
+  if Gem::Version.new(Rails.version) >= Gem::Version.new("6.1")
+    config.active_record.legacy_connection_handling = false
+  end
   if ENV['SKIP_MODEL_EAGER_LOAD']
     config.eager_load_paths -= Rails.application.config.paths['app/models'].to_a
   end

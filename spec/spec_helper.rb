@@ -18,6 +18,9 @@ Rails.application.config.paths['app/models'] << 'app/models_temp'
 
 Combustion.initialize! :active_record, :action_controller do
   config.cache_classes = false
+  if Gem::Version.new(Rails.version) >= Gem::Version.new("6.1")
+    config.active_record.legacy_connection_handling = false
+  end
 end
 require 'rspec/rails'
 require 'super_diff/rspec-rails'
