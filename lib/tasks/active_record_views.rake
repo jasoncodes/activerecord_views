@@ -20,13 +20,6 @@ Rake::Task[schema_rake_task].enhance do
   if table_exists && schema_format == :sql
     tasks = ActiveRecord::Tasks::DatabaseTasks
 
-    filename = case
-    when tasks.respond_to?(:dump_filename)
-      tasks.dump_filename('primary')
-    else
-      tasks.schema_file
-    end
-
     config = if ActiveRecord::Base.configurations.respond_to?(:configs_for)
       if Rails.version.start_with?('6.0.')
         ActiveRecord::Base.configurations.configs_for(env_name: Rails.env, spec_name: 'primary').config
@@ -45,6 +38,13 @@ Rake::Task[schema_rake_task].enhance do
       config.database
     else
       config.fetch('database')
+    end
+
+    filename = case
+    when tasks.respond_to?(:dump_filename)
+      tasks.dump_filename('primary')
+    else
+      tasks.schema_file
     end
 
     pg_tasks = tasks.send(:class_for_adapter, adapter).new(config)
