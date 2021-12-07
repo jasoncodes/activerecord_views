@@ -15,7 +15,11 @@ Rake::Task[schema_rake_task].enhance do
     ActiveRecord::Base.schema_format = :sql
   end
 
-  schema_format = ActiveRecord::Base.schema_format
+  schema_format = if ActiveRecord.respond_to?(:schema_format)
+    ActiveRecord.schema_format
+  else
+    ActiveRecord::Base.schema_format
+  end
 
   if table_exists && schema_format == :sql
     tasks = ActiveRecord::Tasks::DatabaseTasks
@@ -41,6 +45,8 @@ Rake::Task[schema_rake_task].enhance do
     end
 
     filename = case
+    when tasks.respond_to?(:schema_dump_path)
+      tasks.schema_dump_path(config)
     when tasks.respond_to?(:dump_filename)
       tasks.dump_filename('primary')
     else
@@ -48,12 +54,17 @@ Rake::Task[schema_rake_task].enhance do
     end
 
     pg_tasks = tasks.send(:class_for_adapter, adapter).new(config)
-    pg_tasks.send(:set_psql_env)
+    psql_env = if pg_tasks.respond_to?(:psql_env, true)
+      pg_tasks.send(:psql_env)
+    else
+      pg_tasks.send(:set_psql_env)
+      {}
+    end
 
     begin
       active_record_views_dump = Tempfile.open("active_record_views_dump.sql")
       require 'shellwords'
-      system("pg_dump --data-only --no-owner --table=active_record_views #{Shellwords.escape database} >> #{Shellwords.escape active_record_views_dump.path}")
+      system(psql_env, "pg_dump --data-only --no-owner --table=active_record_views #{Shellwords.escape database} >> #{Shellwords.escape active_record_views_dump.path}")
       raise 'active_record_views metadata dump failed' unless $?.success?
 
       pg_tasks.send(:remove_sql_header_comments, active_record_views_dump.path)
