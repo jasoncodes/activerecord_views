@@ -15,7 +15,9 @@ Rake::Task[schema_rake_task].enhance do
     ActiveRecord::Base.schema_format = :sql
   end
 
-  if table_exists && ActiveRecord::Base.schema_format == :sql
+  schema_format = ActiveRecord::Base.schema_format
+
+  if table_exists && schema_format == :sql
     tasks = ActiveRecord::Tasks::DatabaseTasks
 
     filename = case
