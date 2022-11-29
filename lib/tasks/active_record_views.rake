@@ -69,6 +69,8 @@ Rake::Task[schema_rake_task].enhance do
 
       pg_tasks.send(:remove_sql_header_comments, active_record_views_dump.path)
 
+      active_record_views_dump_content = active_record_views_dump.read
+
       # Substitute out any timestamps that were dumped from the active_record_views table
       #
       # Before:
@@ -82,7 +84,6 @@ Rake::Task[schema_rake_task].enhance do
       #     COPY public.active_record_views (name, class_name, checksum, options, refreshed_at) FROM stdin;
       #     test_view       TestView        42364a017b73ef516a0eca9827e6fa00623257ee        {"dependencies":[]}     \N
       #     \.
-      active_record_views_dump_content = active_record_views_dump.read
       if active_record_views_dump_content !~ /^COPY public.active_record_views \(.+, refreshed_at\) FROM stdin;$/
         raise 'refreshed_at is not final column'
       end
