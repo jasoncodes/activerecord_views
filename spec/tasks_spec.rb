@@ -62,7 +62,7 @@ describe 'rake tasks' do
       FileUtils.rm_f 'spec/internal/db/schema.rb'
       FileUtils.rm_f 'spec/internal/db/structure.sql'
 
-      ActiveRecordViews.create_view ActiveRecord::Base.connection, 'test_view', 'TestView', 'SELECT 1'
+      ActiveRecordViews.create_view ActiveRecord::Base.connection, 'test_view_1', 'TestView1', 'SELECT 1'
     end
 
     after do
@@ -79,11 +79,11 @@ describe 'rake tasks' do
       sql = File.read('spec/internal/db/structure.sql')
       expect(sql).to match(/CREATE TABLE public\.schema_migrations/)
       expect(sql).to match(/CREATE VIEW public\.test_view/)
-      expect(sql).to match(/COPY public\.active_record_views.+test_view\tTestView\t.*\t.*\t\\N$/m)
+      expect(sql).to match(/COPY public\.active_record_views.+test_view_1\tTestView1\t.*\t.*\t\\N$/m)
     end
 
     it 'clears refreshed_at values' do
-      ActiveRecord::Base.connection.execute "UPDATE active_record_views SET refreshed_at = current_timestamp AT TIME ZONE 'UTC' WHERE name = 'test_view';"
+      ActiveRecord::Base.connection.execute "UPDATE active_record_views SET refreshed_at = current_timestamp AT TIME ZONE 'UTC' WHERE name = 'test_view_1';"
 
       rake schema_rake_task
 
@@ -96,7 +96,7 @@ describe 'rake tasks' do
       system 'psql -X -q -o /dev/null -f spec/internal/db/structure.sql activerecord_views_test'
       raise unless $?.success?
 
-      refreshed_ats = ActiveRecord::Base.connection.select_values("SELECT refreshed_at FROM active_record_views WHERE name = 'test_view'")
+      refreshed_ats = ActiveRecord::Base.connection.select_values("SELECT refreshed_at FROM active_record_views WHERE name = 'test_view_1'")
       expect(refreshed_ats).to eq [nil]
     end
 
