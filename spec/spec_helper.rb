@@ -23,7 +23,6 @@ Combustion.initialize! :active_record, :action_controller do
   end
 end
 require 'rspec/rails'
-require 'super_diff/rspec-rails'
 
 RSpec.shared_context 'sql_statements' do
   let(:sql_statements) { [] }
