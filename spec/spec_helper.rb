@@ -81,15 +81,13 @@ RSpec.configure do |config|
 end
 
 def test_request
-  Rails.application.reloader.wrap do
-    status, headers, body = Rails.application.call(
-      'REQUEST_METHOD' => 'GET',
-      'PATH_INFO' => '/',
-      'rack.input' => StringIO.new,
-    )
-    expect(status).to eq 204
-    body.close
-  end
+  status, headers, body = Rails.application.call(
+    'REQUEST_METHOD' => 'GET',
+    'PATH_INFO' => '/',
+    'rack.input' => StringIO.new,
+  )
+  expect(status).to eq 204
+  body.close
 end
 
 def update_file(file, new_content)
