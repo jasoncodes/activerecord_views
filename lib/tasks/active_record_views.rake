@@ -89,6 +89,12 @@ Rake::Task[schema_rake_task].enhance do
       end
       active_record_views_dump_content.gsub!(/\t\d\d\d\d-\d\d-\d\d.*$/, "\t\\N")
 
+      active_record_views_dump_content = active_record_views_dump_content
+        .lines
+        .chunk { |line| line.include?("\t") }
+        .flat_map { |is_data, lines| is_data ? lines.sort : lines }
+        .join
+
       File.open filename, 'a' do |io|
         io.puts active_record_views_dump_content
       end

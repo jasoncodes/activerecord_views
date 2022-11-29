@@ -63,6 +63,8 @@ describe 'rake tasks' do
       FileUtils.rm_f 'spec/internal/db/structure.sql'
 
       ActiveRecordViews.create_view ActiveRecord::Base.connection, 'test_view_1', 'TestView1', 'SELECT 1'
+      ActiveRecordViews.create_view ActiveRecord::Base.connection, 'test_view_3', 'TestView3', 'SELECT 3'
+      ActiveRecordViews.create_view ActiveRecord::Base.connection, 'test_view_2', 'TestView2', 'SELECT 2'
     end
 
     after do
@@ -80,6 +82,7 @@ describe 'rake tasks' do
       expect(sql).to match(/CREATE TABLE public\.schema_migrations/)
       expect(sql).to match(/CREATE VIEW public\.test_view/)
       expect(sql).to match(/COPY public\.active_record_views.+test_view_1\tTestView1\t.*\t.*\t\\N$/m)
+      expect(sql).to match(/^test_view_1.+^test_view_2.+^test_view_3/m)
     end
 
     it 'clears refreshed_at values' do
