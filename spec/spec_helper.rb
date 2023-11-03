@@ -23,7 +23,7 @@ Combustion.initialize! :active_record, :action_controller do
   end
   config.cache_classes = false
   config.secret_key_base = 'dummy'
-  if Gem::Version.new(Rails.version) >= Gem::Version.new("6.1")
+  if Gem::Requirement.new('~> 6.1').satisfied_by?(Gem::Version.new(Rails.version))
     config.active_record.legacy_connection_handling = false
   end
 end
