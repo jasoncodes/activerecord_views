@@ -123,7 +123,7 @@ describe ActiveRecordViews do
           it 'fails to update view if column used by dependant view is removed' do
             expect {
               create_test_view "select 'foo'::text as name"
-            }.to raise_error ActiveRecord::StatementInvalid, /column "id" does not exist/
+            }.to raise_error ActiveRecord::StatementInvalid, /^PG::UndefinedColumn:/
             expect(test_view_sql).to eq 'SELECT 1 AS id;'
             expect(Integer(connection.select_value('SELECT id2 FROM dependant2a'))).to eq 2
           end
