@@ -1,0 +1,18 @@
+version: '2'
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: activerecord_views_user
+      POSTGRES_PASSWORD: activerecord_views_password
+      POSTGRES_DB: activerecord_views_test
+    command: -c fsync=off -c full_page_writes=off
+  app:
+    build: .
+    depends_on:
+      - db
+    environment:
+      PGHOST: db
+      PGUSER: activerecord_views_user
+      PGPASSWORD: activerecord_views_password
+      PGDATABASE: activerecord_views_test

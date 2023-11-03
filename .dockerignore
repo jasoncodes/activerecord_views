@@ -1,0 +1,8 @@
+.git
+tmp/**
+Gemfile.lock
+gemfiles/*.gemfile.lock
+pkg
+spec/internal/db/schema.rb
+spec/internal/app/models_temp/**
+spec/internal/log/*.log

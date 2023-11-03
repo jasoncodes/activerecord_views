@@ -1,0 +1,25 @@
+#!/bin/bash -e
+set -euo pipefail
+
+cat <<-YAML
+steps:
+YAML
+
+while read BUNDLE_GEMFILE; do
+  APPRAISAL_NAME="$(basename "$BUNDLE_GEMFILE" .gemfile)"
+
+cat <<-YAML
+  -
+    key: "rspec-$APPRAISAL_NAME"
+    depends_on:
+      - "docker-build"
+    label: ":rspec: $APPRAISAL_NAME"
+    command: 'appraisal $APPRAISAL_NAME -- bundle exec rspec --color --format doc'
+    plugins:
+      - docker-compose#v3.0.3:
+          pull:
+            - db
+          pull-retries: 3
+          run: app
+YAML
+done < <(find gemfiles -name '*.gemfile' | sort)
