@@ -9,6 +9,9 @@ Combustion::Database.instance_eval do
 end
 
 Combustion.initialize! :active_record, :action_controller do
+  config.active_support.deprecation = -> (message, _callstack, _deprecator) do
+    warn message
+  end
   config.cache_classes = false
   config.log_level = :debug
   config.active_record.schema_format = ENV.fetch('SCHEMA_FORMAT', 'sql').to_sym

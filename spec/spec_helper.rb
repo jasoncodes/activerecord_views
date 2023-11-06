@@ -17,6 +17,9 @@ FileUtils.mkdir_p TEST_TEMP_MODEL_DIR
 Rails.application.config.paths['app/models'] << 'app/models_temp'
 
 Combustion.initialize! :active_record, :action_controller do
+  config.active_support.deprecation = -> (message, _callstack, _deprecator) do
+    warn message
+  end
   config.cache_classes = false
   config.secret_key_base = 'dummy'
   if Gem::Version.new(Rails.version) >= Gem::Version.new("6.1")
