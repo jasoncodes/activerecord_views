@@ -15,6 +15,8 @@ module ActiveRecordViews
   def self.init!
     require 'active_record_views/extension'
     ::ActiveRecord::Base.send :include, ActiveRecordViews::Extension
+    require 'active_record_views/database_tasks'
+    ::ActiveRecord::Tasks::DatabaseTasks.singleton_class.prepend ActiveRecordViews::DatabaseTasks
     require 'active_record_views/database_cleaner/truncation_extension' if defined? ::DatabaseCleaner
   end
 

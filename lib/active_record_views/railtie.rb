@@ -16,9 +16,5 @@ module ActiveRecordViews
         end
       end
     end
-
-    rake_tasks do
-      load 'tasks/active_record_views.rake'
-    end
   end
 end
