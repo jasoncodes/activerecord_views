@@ -21,6 +21,9 @@ Combustion.initialize! :active_record, :action_controller do
   end
   if ENV['SKIP_MODEL_EAGER_LOAD']
     config.eager_load_paths -= Rails.application.config.paths['app/models'].to_a
+    if Rails::VERSION::MAJOR >= 6
+      Rails.autoloaders.main.ignore Rails.application.config.paths['app/models'].to_a
+    end
   end
 end
 
