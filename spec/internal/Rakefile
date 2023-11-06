@@ -4,7 +4,7 @@ require 'combustion'
 
 Combustion::Database.instance_eval do
   def setup(options)
-    ActiveRecord::Base.configurations = YAML.load(ERB.new(File.read("#{Rails.root}/config/database.yml")).result)
+    ActiveRecord::Base.configurations = YAML.safe_load(ERB.new(File.read("#{Rails.root}/config/database.yml")).result, aliases: true)
   end
 end
 
