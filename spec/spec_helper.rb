@@ -17,6 +17,7 @@ FileUtils.mkdir_p TEST_TEMP_MODEL_DIR
 Rails.application.config.paths['app/models'] << 'app/models_temp'
 
 Combustion.initialize! :active_record, :action_controller do
+  config.load_defaults "#{Rails::VERSION::MAJOR}.#{Rails::VERSION::MINOR}"
   config.active_support.deprecation = -> (message, _callstack, _deprecator) do
     warn message
   end
