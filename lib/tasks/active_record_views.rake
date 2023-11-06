@@ -24,14 +24,10 @@ Rake::Task[schema_rake_task].enhance do
   if table_exists && schema_format == :sql
     tasks = ActiveRecord::Tasks::DatabaseTasks
 
-    config = if ActiveRecord::Base.configurations.respond_to?(:configs_for)
-      if Rails.version.start_with?('6.0.')
-        ActiveRecord::Base.configurations.configs_for(env_name: Rails.env, spec_name: 'primary').config
-      else
-        ActiveRecord::Base.configurations.configs_for(env_name: Rails.env, name: 'primary')
-      end
+    config = if Rails.version.start_with?('6.0.')
+      ActiveRecord::Base.configurations.configs_for(env_name: Rails.env, spec_name: 'primary').config
     else
-      tasks.current_config
+      ActiveRecord::Base.configurations.configs_for(env_name: Rails.env, name: 'primary')
     end
     adapter = if config.respond_to?(:adapter)
       config.adapter
@@ -50,16 +46,11 @@ Rake::Task[schema_rake_task].enhance do
     when tasks.respond_to?(:dump_filename)
       tasks.dump_filename('primary')
     else
-      tasks.schema_file
+      raise 'unsupported Rails version'
     end
 
     pg_tasks = tasks.send(:class_for_adapter, adapter).new(config)
-    psql_env = if pg_tasks.respond_to?(:psql_env, true)
-      pg_tasks.send(:psql_env)
-    else
-      pg_tasks.send(:set_psql_env)
-      {}
-    end
+    psql_env = pg_tasks.send(:psql_env)
 
     begin
       active_record_views_dump = Tempfile.open("active_record_views_dump.sql")
