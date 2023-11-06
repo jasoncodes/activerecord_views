@@ -90,7 +90,7 @@ describe 'rake tasks' do
 
       rake schema_rake_task
 
-      ActiveRecord::Base.clear_all_connections!
+      ActiveRecord::Base.connection_handler.clear_all_connections!
 
       system 'dropdb activerecord_views_test'
       raise unless $?.success?
