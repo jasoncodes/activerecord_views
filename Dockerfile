@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.4
 
-FROM ruby:3.1.4-slim-bookworm AS ruby
+FROM ruby:3.2.2-slim-bookworm AS ruby
 
 WORKDIR /app
 SHELL ["/bin/bash", "-c"]
