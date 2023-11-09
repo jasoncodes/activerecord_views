@@ -1,6 +1,7 @@
 appraise 'rails6_0' do
   gem 'rails', '~> 6.0.0'
   gem 'pg', '< 1.5'
+  gem 'psych', '< 4'
 end
 
 appraise 'rails6_1' do
