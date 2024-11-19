@@ -1,5 +1,5 @@
 module ActiveRecordViews::DatabaseTasks
-  def migrate(*)
+  def migrate(...)
     super
 
     unless ActiveRecordViews::Extension.create_enabled
