@@ -20,3 +20,7 @@ end
 appraise 'rails7_2' do
   gem 'rails', '~> 7.2.0'
 end
+
+appraise 'rails8_0' do
+  gem 'rails', '~> 8.0.0'
+end
