@@ -52,7 +52,13 @@ module ActiveRecordViews::DatabaseTasks
     end
 
     active_record_views_dump = Tempfile.open(['active_record_views_dump', '.sql'])
-    adapter.send(:run_cmd, 'pg_dump', %W[--data-only --no-owner --table=active_record_views #{database_name} -f #{active_record_views_dump.path}], 'dumping')
+    args = %W[--data-only --no-owner --table=active_record_views #{database_name} -f #{active_record_views_dump.path}]
+    # Rails 8.1 changed run_cmd signature - description is now a keyword argument or not needed
+    if Gem::Requirement.new('>= 8.1').satisfied_by?(Gem::Version.new(ActiveRecord::VERSION::STRING))
+      adapter.send(:run_cmd, 'pg_dump', *args)
+    else
+      adapter.send(:run_cmd, 'pg_dump', args, 'dumping')
+    end
     adapter.send(:remove_sql_header_comments, active_record_views_dump.path)
 
     active_record_views_dump_content = active_record_views_dump.read
