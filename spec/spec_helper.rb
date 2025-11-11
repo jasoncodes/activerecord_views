@@ -6,6 +6,7 @@ $VERBOSE = true
 
 require './spec/support/silence_warnings.rb'
 
+require 'logger'
 require 'combustion'
 require 'active_record_views'
 
