@@ -111,6 +111,7 @@ describe ActiveRecordViews::Extension do
       rb_file = 'spec/internal/app/models_temp/deleted_file_test_model.rb'
       File.write rb_file, <<~RB
         class DeletedFileTestModel < ActiveRecord::Base
+          self.implicit_order_column = :id
           is_view
         end
       RB
@@ -192,6 +193,7 @@ describe ActiveRecordViews::Extension do
       File.write sql_file, 'SELECT 123 AS id;'
 
       class MaterializedViewTestModel < ActiveRecord::Base
+        self.implicit_order_column = :id
         is_view materialized: true
       end
 
