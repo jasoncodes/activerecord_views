@@ -87,7 +87,7 @@ RSpec.configure do |config|
 end
 
 def test_request
-  status, headers, body = Rails.application.call(
+  status, _headers, body = Rails.application.call(
     'REQUEST_METHOD' => 'GET',
     'PATH_INFO' => '/',
     'rack.input' => StringIO.new,
